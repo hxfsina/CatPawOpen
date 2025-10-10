@@ -149,7 +149,7 @@ async function search(inReq, _outResp) {
     // 直接返回三个参数，使用固定值
     return {
       page: parseInt(page),
-      pagecount: parseInt(page) + 1, // 或者根据实际情况调整
+      pagecount: 100, // 或者根据实际情况调整
       list: videos,
     };
   } catch (error) {
