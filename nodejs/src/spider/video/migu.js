@@ -16,28 +16,15 @@ async function home(_inReq, _outResp) {
     
     // 直接使用API返回的分类数据
     const classes = data.class || [];
-    const filters = data.filters || {};
 
     console.log(`成功获取 ${classes.length} 个分类`);
     
+    // 只需要返回class
     return {
-      class: classes,
-      filters: filters
+      class: classes
     };
   } catch (error) {
     console.error('获取首页分类失败:', error.message);
-    // 返回默认分类作为fallback
-    return {
-      class: [
-        {'type_id': '1000', 'type_name': '电影'},
-        {'type_id': '1001', 'type_name': '电视剧'},
-        {'type_id': '1005', 'type_name': '综艺'},
-        {'type_id': '1002', 'type_name': '纪实'},
-        {'type_id': '1007', 'type_name': '动漫'},
-        {'type_id': '601382', 'type_name': '少儿'}
-      ],
-      filters: {}
-    };
   }
 }
 
@@ -51,7 +38,7 @@ async function category(inReq, _outResp) {
   try {
     console.log(`获取分类内容: tid=${tid}, page=${page}`);
     
-    // 构建查询参数 - 只传递分类ID和页码，去掉filter参数
+    // 构建查询参数 - 只传递分类ID和页码，去掉所有filter参数
     const params = new URLSearchParams({
       cid: tid,
       page: page.toString()
@@ -79,13 +66,6 @@ async function category(inReq, _outResp) {
     };
   } catch (error) {
     console.error('获取分类内容失败:', error.message);
-    return {
-      page: parseInt(page),
-      pagecount: parseInt(page),
-      limit: 20,
-      total: 0,
-      list: [],
-    };
   }
 }
 
@@ -112,9 +92,6 @@ async function detail(inReq, _outResp) {
     };
   } catch (error) {
     console.error('获取视频详情失败:', error.message);
-    return {
-      list: [],
-    };
   }
 }
 
@@ -145,11 +122,6 @@ async function play(inReq, _outResp) {
     };
   } catch (error) {
     console.error('获取播放地址失败:', error.message);
-    return {
-      parse: 0,
-      url: '',
-      header: {}
-    };
   }
 }
 
@@ -182,11 +154,6 @@ async function search(inReq, _outResp) {
     };
   } catch (error) {
     console.error('搜索失败:', error.message);
-    return {
-      page: parseInt(page),
-      pagecount: parseInt(page),
-      list: [],
-    };
   }
 }
 
