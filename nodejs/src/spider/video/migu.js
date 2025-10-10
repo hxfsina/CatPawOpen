@@ -146,13 +146,10 @@ async function search(inReq, _outResp) {
     
     console.log(`搜索成功，找到 ${videos.length} 个结果`);
 
-    // 使用与分类页完全相同的结构
-    const hasMore = videos.length >= 10;
+    // 直接返回三个参数，使用固定值
     return {
       page: parseInt(page),
-      pagecount: hasMore ? parseInt(page) + 1 : parseInt(page),
-      limit: 10,
-      total: hasMore ? 1000 : videos.length,
+      pagecount: parseInt(page) + 1, // 或者根据实际情况调整
       list: videos,
     };
   } catch (error) {
