@@ -44,26 +44,18 @@ async function home(_inReq, _outResp) {
 async function category(inReq, _outResp) {
   const tid = inReq.body.id;
   const pg = inReq.body.page;
-  const filter = inReq.body.filter || {};
   let page = pg || 1;
   
   if (page == 0) page = 1;
 
   try {
-    console.log(`获取分类内容: tid=${tid}, page=${page}, filter=`, filter);
+    console.log(`获取分类内容: tid=${tid}, page=${page}`);
     
-    // 构建查询参数 - 分类ID和页码
+    // 构建查询参数 - 只传递分类ID和页码，去掉filter参数
     const params = new URLSearchParams({
       cid: tid,
       page: page.toString()
     });
-    
-    // 将filter对象中的所有筛选参数完整传递给API
-    for (const [key, value] of Object.entries(filter)) {
-      if (value && value !== '') {
-        params.append(key, value);
-      }
-    }
     
     const response = await req.get(`${API_BASE}/api/category?${params.toString()}`);
     
@@ -98,7 +90,7 @@ async function category(inReq, _outResp) {
 }
 
 async function detail(inReq, _outResp) {
-  const id = inReq.body.id; // CatPawOpen 的 detail 接口通常只传单个ID
+  const id = inReq.body.id;
   
   try {
     console.log(`获取视频详情: id=${id}`);
