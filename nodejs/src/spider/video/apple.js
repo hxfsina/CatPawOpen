@@ -313,7 +313,7 @@ function getVideoList(data) {
 export default {
     meta: {
         key: 'xpg',
-        name: '小苹果',
+        name: '🍎『小苹果』',
         type: 3,
     },
     api: async (fastify) => {
