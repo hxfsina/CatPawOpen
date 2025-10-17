@@ -16,6 +16,15 @@ jobs:
       with:
         node-version: 18.17.1
         
+    - name: Clean dist directory
+      run: |
+        if [ -d "nodejs/dist" ]; then
+          rm -rf nodejs/dist/
+          echo "nodejs/dist directory removed"
+        else
+          echo "nodejs/dist directory does not exist, skipping removal"
+        fi
+        
     - name: Run npm build
       working-directory: nodejs
       run: |
