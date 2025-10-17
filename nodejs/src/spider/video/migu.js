@@ -252,7 +252,7 @@ async function test(inReq, outResp) {
 export default {
   meta: {
     key: 'migu',
-    name: '咪咕视频',
+    name: '📺『咪咕视频』',
     type: 3,
   },
   api: async (fastify) => {
