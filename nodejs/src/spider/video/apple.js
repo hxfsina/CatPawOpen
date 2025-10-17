@@ -14,7 +14,7 @@ const playHeaders = {
     'hash': '524f',
     'screenx': '2331',
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
-    'token': 'VkxTyy6Krh4hd3lrQySUCJlsDYzzxxBbttphr3DiQNhmJkwoyEEm2YEu8qcOFGz2SmxGbIaSC91pa+8+VE9+SPQjGWY/wnqwKk1McYhsGyVVvHRAF0B1mD7922ara1o3k/EwZ1xyManr90EeUSxI7rPOLBwX5zeOri31MeyDfBnIdhckWld4V1k2ZfZ3QKbN',
+    'token': 'VkxTyy6Krh4hd3lrQySUCJlsDYzzxxBbttphr3DiQNhmJkwoyEEm2YEu8qcOFGz2SmxGbIaSC91pa++VE9+SPQjGWY/wnqwKk1McYhsGyVVvHRAF0B1mD7922ara1o3k/EwZ1xyManr90EeUSxI7rPOLBwX5zeOri31MeyDfBnIdhckWld4V1k2ZfZ3QKbN',
     'timestamp': '1749174636',
     'screeny': '1121',
 };
@@ -53,7 +53,7 @@ async function home(_inReq, _outResp) {
     };
     
     const filters = {};
-    let classes = []; // 改为 let 声明
+    let classes = [];
     const list = [];
 
     // 处理分类和过滤器
@@ -112,7 +112,7 @@ async function home(_inReq, _outResp) {
         console.error('Get home video error:', e);
     }
 
-    // 修复：使用新变量进行过滤和排序
+    // 分类排序
     if (categories.length > 0) {
         const filteredClasses = classes.filter(cls => categories.includes(cls.type_name));
         classes = filteredClasses.sort((a, b) => categories.indexOf(a.type_name) - categories.indexOf(b.type_name));
@@ -185,9 +185,9 @@ async function detail(inReq, _outResp) {
             vod_actor: v.actor || '',
             vod_director: v.director || '',
             vod_content: v.content || '',
-            vod_play_from: '小苹果＇',
+            vod_play_from: '小苹果',
             vod_play_url: playUrls.join('#'),
-            vod_remarks: v.updateInfo ? `更新至${v.updateInfo}` : v.score || ''
+            vod_remarks: getRemarks(v) // 使用新的备注生成函数
         };
         
         videos.push(vod);
@@ -237,22 +237,41 @@ function getList(data) {
     }
     
     for (const vod of data) {
-        let remarks = '';
-        if (vod.updateInfo) {
-            remarks = `更新至${vod.updateInfo}`;
-        } else if (vod.score) {
-            remarks = vod.score;
-        }
-        
         videos.push({
             vod_id: vod.id,
             vod_name: vod.name || '',
             vod_pic: vod.pic || '',
-            vod_remarks: remarks
+            vod_remarks: getRemarks(vod) // 使用新的备注生成函数
         });
     }
     
     return videos;
+}
+
+// 新的备注生成函数 - 优化显示逻辑
+function getRemarks(vod) {
+    // 优先显示更新信息
+    if (vod.updateInfo && vod.updateInfo.trim() !== '') {
+        return `更新至${vod.updateInfo}`;
+    }
+    
+    // 如果有评分且不是0.0，显示评分
+    if (vod.score && vod.score !== '0.0' && vod.score !== '0') {
+        return `评分:${vod.score}`;
+    }
+    
+    // 如果有年份，显示年份
+    if (vod.year && vod.year.trim() !== '') {
+        return vod.year;
+    }
+    
+    // 如果有地区，显示地区
+    if (vod.area && vod.area.trim() !== '') {
+        return vod.area;
+    }
+    
+    // 默认显示空字符串
+    return '';
 }
 
 async function test(inReq, outResp) {
@@ -331,7 +350,7 @@ async function test(inReq, outResp) {
 export default {
     meta: {
         key: 'xpgtv',
-        name: 'XPGGTV',
+        name: '小苹果',
         type: 3,
     },
     api: async (fastify) => {
