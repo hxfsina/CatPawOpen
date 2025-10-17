@@ -53,7 +53,7 @@ async function home(_inReq, _outResp) {
     };
     
     const filters = {};
-    const classes = [];
+    let classes = []; // 改为 let 声明
     const list = [];
 
     // 处理分类和过滤器
@@ -112,10 +112,10 @@ async function home(_inReq, _outResp) {
         console.error('Get home video error:', e);
     }
 
-    // 分类排序
+    // 修复：使用新变量进行过滤和排序
     if (categories.length > 0) {
-        classes = classes.filter(cls => categories.includes(cls.type_name));
-        classes.sort((a, b) => categories.indexOf(a.type_name) - categories.indexOf(b.type_name));
+        const filteredClasses = classes.filter(cls => categories.includes(cls.type_name));
+        classes = filteredClasses.sort((a, b) => categories.indexOf(a.type_name) - categories.indexOf(b.type_name));
     }
 
     return {
@@ -185,7 +185,7 @@ async function detail(inReq, _outResp) {
             vod_actor: v.actor || '',
             vod_director: v.director || '',
             vod_content: v.content || '',
-            vod_play_from: '小苹果',
+            vod_play_from: '小苹果＇',
             vod_play_url: playUrls.join('#'),
             vod_remarks: v.updateInfo ? `更新至${v.updateInfo}` : v.score || ''
         };
