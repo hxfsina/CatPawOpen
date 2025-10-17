@@ -1,127 +1,47 @@
+import * as HLS from 'hls-parser';
 import req from '../../util/req.js';
 
-let url = 'http://asp.xpgtv.com';
-let categories = [];
-
-const headers = {
+let host = 'http://asp.xpgtv.com';
+let headers = {
     "User-Agent": "okhttp/3.12.11"
 };
 
-const playHeaders = {
-    'user_id': 'XPGBOX',
-    'token2': 'XFxIummRrngadHB4TCzeUaleebTX10Vl/ftCvGLPeI5tN2Y/liZ5tY5e4t8=',
-    'version': 'XPGBOX com.phoenix.tv1.5.5',
-    'hash': '524f',
-    'screenx': '2331',
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
-    'token': 'VkxTyy6Krh4hd3lrQySUCJlsDYzzxxBbttphr3DiQNhmJkwoyEEm2YEu8qcOFGz2SmxGbIaSC91pa++VE9+SPQjGWY/wnqwKk1McYhsGyVVvHRAF0B1mD7922ara1o3k/EwZ1xyManr90EeUSxI7rPOLBwX5zeOri31MeyDfBnIdhckWld4V1k2ZfZ3QKbN',
-    'timestamp': '1749174636',
-    'screeny': '1121',
-};
-
-async function request(reqUrl, params = {}, customHeaders = {}) {
-    const options = {
+async function request(reqUrl, options = {}) {
+    const defaultOptions = {
         method: 'get',
-        headers: {...headers, ...customHeaders},
-        timeout: 15000
+        headers: headers
     };
-    
-    if (Object.keys(params).length > 0) {
-        options.params = params;
-    }
-    
-    let res = await req(reqUrl, options);
+    const finalOptions = { ...defaultOptions, ...options };
+    let res = await req(reqUrl, finalOptions);
     return res.data;
 }
 
 async function init(inReq, _outResp) {
-    if (inReq.server.config.xpgtv) {
-        url = inReq.server.config.xpgtv.url || url;
-        categories = inReq.server.config.xpgtv.categories || [];
-    }
+    // 可以在这里配置host和其他参数
     return {};
 }
 
 async function home(_inReq, _outResp) {
-    // 获取分类数据
-    const data = await request(`${url}/api.php/v2.vod/androidtypes`);
-    const dy = {
-        "classes": "类型",
-        "areas": "地区", 
-        "years": "年份",
-        "sortby": "排序",
-    };
+    const data = await request(`${host}/api.php/v2.vod/androidtypes`);
     
-    const filters = {};
     let classes = [];
-    const list = [];
-
-    // 处理分类和过滤器
     for (const item of data.data) {
-        let hasNonEmptyField = false;
-        item.sortby = ['updatetime', 'hits', 'score'];
-        const demos = ['时间', '人气', '评分'];
-        
         classes.push({
-            type_name: item.type_name,
-            type_id: String(item.type_id)
+            type_id: item.type_id.toString(),
+            type_name: item.type_name
         });
-
-        // 检查是否有非空字段
-        for (const key in dy) {
-            if (item[key] && item[key].length > 1) {
-                hasNonEmptyField = true;
-                break;
-            }
-        }
-
-        if (hasNonEmptyField) {
-            filters[String(item.type_id)] = [];
-            for (const dkey in item) {
-                if (dy[dkey] && item[dkey] && item[dkey].length > 1) {
-                    const values = item[dkey];
-                    const valueArray = [];
-                    
-                    for (let idx = 0; idx < values.length; idx++) {
-                        const value = values[idx].trim();
-                        if (value !== "") {
-                            valueArray.push({
-                                n: dkey === "sortby" ? demos[idx] : value,
-                                v: value
-                            });
-                        }
-                    }
-                    
-                    filters[String(item.type_id)].push({
-                        key: dkey,
-                        name: dy[dkey],
-                        value: valueArray
-                    });
-                }
-            }
-        }
     }
 
     // 获取首页视频内容
-    try {
-        const rsp = await request(`${url}/api.php/v2.main/androidhome`);
-        for (const i of rsp.data.list) {
-            list.push(...getList(i.list));
-        }
-    } catch (e) {
-        console.error('Get home video error:', e);
-    }
-
-    // 分类排序
-    if (categories.length > 0) {
-        const filteredClasses = classes.filter(cls => categories.includes(cls.type_name));
-        classes = filteredClasses.sort((a, b) => categories.indexOf(a.type_name) - categories.indexOf(b.type_name));
+    const homeVideoData = await request(`${host}/api.php/v2.main/androidhome`);
+    let videos = [];
+    for (const section of homeVideoData.data.list) {
+        videos = videos.concat(getVideoList(section.list));
     }
 
     return {
         class: classes,
-        list: list,
-        filters: filters
+        list: videos
     };
 }
 
@@ -133,28 +53,28 @@ async function category(inReq, _outResp) {
     const params = {
         page: pg,
         type: tid,
-        area: extend.areaes || '',
-        year: extend.yeares || '',
+        area: extend.area || '',
+        year: extend.year || '',
         sortby: extend.sortby || '',
         class: extend.classes || ''
     };
     
     // 过滤空参数
     const filteredParams = {};
-    for (const key in params) {
-        if (params[key]) {
-            filteredParams[key] = params[key];
-        }
+    for (const [key, value] of Object.entries(params)) {
+        if (value) filteredParams[key] = value;
     }
     
-    const rsp = await request(`${url}/api.php/v2.vod/androidfilter10086`, filteredParams);
+    const data = await request(`${host}/api.php/v2.vod/androidfilter10086`, {
+        params: filteredParams
+    });
     
     return {
-        list: getList(rsp.data),
         page: parseInt(pg),
         pagecount: 9999,
         limit: 90,
-        total: 999999
+        total: 999999,
+        list: getVideoList(data.data)
     };
 }
 
@@ -163,33 +83,24 @@ async function detail(inReq, _outResp) {
     const videos = [];
     
     for (const id of ids) {
-        const rsp = await request(`${url}/api.php/v3.vod/androiddetail2?vod_id=${id}`);
-        const v = rsp.data;
+        const data = await request(`${host}/api.php/v3.vod/androiddetail2?vod_id=${id}`);
+        const v = data.data;
         
-        // 构建播放列表
-        const playUrls = [];
-        if (v.urls && Array.isArray(v.urls)) {
-            for (const item of v.urls) {
-                playUrls.push(`${item.key}$${item.url}`);
-            }
-        }
-        
-        const vod = {
-            vod_id: id,
-            vod_name: v.name || '',
-            vod_pic: v.pic || '',
-            vod_year: v.year || '',
-            vod_area: v.area || '',
-            vod_lang: v.lang || '',
-            type_name: v.className || '',
-            vod_actor: v.actor || '',
-            vod_director: v.director || '',
-            vod_content: v.content || '',
+        let vod = {
+            vod_id: v.id || id,
+            vod_name: v.name,
+            vod_pic: v.pic,
+            vod_year: v.year,
+            vod_area: v.area,
+            vod_lang: v.lang,
+            type_name: v.className,
+            vod_actor: v.actor,
+            vod_director: v.director,
+            vod_content: v.content,
+            vod_remarks: v.updateInfo || v.score || '',
             vod_play_from: '小苹果',
-            vod_play_url: playUrls.join('#'),
-            vod_remarks: getRemarks(v) // 使用新的备注生成函数
+            vod_play_url: v.urls ? v.urls.map(item => `${item.key}$${item.url}`).join('#') : ''
         };
-        
         videos.push(vod);
     }
     
@@ -198,89 +109,113 @@ async function detail(inReq, _outResp) {
     };
 }
 
-async function search(inReq, _outResp) {
-    const wd = inReq.body.wd;
-    const pg = inReq.body.page || 1;
-    
-    const rsp = await request(`${url}/api.php/v2.vod/androidsearch10086?page=${pg}&wd=${encodeURIComponent(wd)}`);
-    
-    return {
-        list: getList(rsp.data),
-        page: parseInt(pg),
-        pagecount: 9999,
-        limit: 90,
-        total: 999999
-    };
-}
-
 async function play(inReq, _outResp) {
-    let playUrl = inReq.body.id;
+    const id = inReq.body.id;
+    const flag = inReq.body.flag;
     
-    // 如果URL不是http开头，构建m3u8地址
-    if (!playUrl.startsWith('http')) {
-        playUrl = `http://c.xpgtv.net/m3u8/${playUrl}.m3u8`;
+    const playHeaders = {
+        'user_id': 'XPGBOX',
+        'token2': 'XFxIummRrngadHB4TCzeUaleebTX10Vl/ftCvGLPeI5tN2Y/liZ5tY5e4t8=',
+        'version': 'XPGBOX com.phoenix.tv1.5.5',
+        'hash': '524f',
+        'screenx': '2331',
+        'user-agent': 'okhttp/3.12.11',
+        'token': 'VkxTyy6Krh4hd3lrQySUCJlsDYzzxxBbttphr3DiQNhmJkwoyEEm2YEu8qcOFGz2SmxGbIaSC91pa+8+VE9+SPQjGWY/wnqwKk1McYhsGyVVvHRAF0B1mD7922ara1o3k/EwZ1xyManr90EeUSxI7rPOLBwX5zeOri31MeyDfBnIdhckWld4V1k2ZfZ3QKbN',
+        'timestamp': '1749174636',
+        'screeny': '1121',
+    };
+    
+    let finalUrl = id;
+    if (!id.includes('http')) {
+        finalUrl = `http://c.xpgtv.net/m3u8/${id}.m3u8`;
     }
     
     return {
         parse: 0,
-        url: playUrl,
+        url: finalUrl,
         header: playHeaders
     };
 }
 
-// 辅助函数：处理视频列表
-function getList(data) {
-    const videos = [];
+async function search(inReq, _outResp) {
+    const wd = inReq.body.wd;
+    const pg = inReq.body.page || 1;
     
-    if (!data || !Array.isArray(data)) {
-        return videos;
-    }
+    const data = await request(`${host}/api.php/v2.vod/androidsearch10086?page=${pg}&wd=${encodeURIComponent(wd)}`);
     
-    for (const vod of data) {
-        videos.push({
-            vod_id: vod.id,
-            vod_name: vod.name || '',
-            vod_pic: vod.pic || '',
-            vod_remarks: getRemarks(vod) // 使用新的备注生成函数
-        });
-    }
-    
-    return videos;
+    return {
+        page: parseInt(pg),
+        pagecount: 9999,
+        limit: 90,
+        total: 999999,
+        list: getVideoList(data.data)
+    };
 }
 
-// 新的备注生成函数 - 优化显示逻辑
-function getRemarks(vod) {
-    // 优先显示更新信息
-    if (vod.updateInfo && vod.updateInfo.trim() !== '') {
-        return `更新至${vod.updateInfo}`;
-    }
+async function proxy(inReq, outResp) {
+    const what = inReq.params.what;
+    const purl = decodeURIComponent(inReq.params.ids);
     
-    // 如果有评分且不是0.0，显示评分
-    if (vod.score && vod.score !== '0.0' && vod.score !== '0') {
-        return `评分:${vod.score}`;
+    if (what === 'hls') {
+        const resp = await req(purl, {
+            method: 'get',
+            headers: headers
+        });
+        
+        const plist = HLS.parse(resp.data);
+        if (plist.variants) {
+            for (const v of plist.variants) {
+                if (!v.uri.startsWith('http')) {
+                    v.uri = new URL(v.uri, purl).toString();
+                }
+                v.uri = inReq.server.prefix + '/proxy/hls/' + encodeURIComponent(v.uri) + '/.m3u8';
+            }
+        }
+        
+        if (plist.segments) {
+            for (const s of plist.segments) {
+                if (!s.uri.startsWith('http')) {
+                    s.uri = new URL(s.uri, purl).toString();
+                }
+                if (s.key && s.key.uri && !s.key.uri.startsWith('http')) {
+                    s.key.uri = new URL(s.key.uri, purl).toString();
+                }
+                s.uri = inReq.server.prefix + '/proxy/ts/' + encodeURIComponent(s.uri) + '/.ts';
+            }
+        }
+        
+        const hls = HLS.stringify(plist);
+        let hlsHeaders = {};
+        if (resp.headers['content-length']) {
+            Object.assign(hlsHeaders, resp.headers, {
+                'content-length': hls.length.toString()
+            });
+        } else {
+            Object.assign(hlsHeaders, resp.headers);
+        }
+        
+        delete hlsHeaders['transfer-encoding'];
+        delete hlsHeaders['cache-control'];
+        if (hlsHeaders['content-encoding'] === 'gzip') {
+            delete hlsHeaders['content-encoding'];
+        }
+        
+        outResp.code(resp.status).headers(hlsHeaders);
+        return hls;
+    } else {
+        outResp.redirect(purl);
+        return;
     }
-    
-    // 如果有年份，显示年份
-    if (vod.year && vod.year.trim() !== '') {
-        return vod.year;
-    }
-    
-    // 如果有地区，显示地区
-    if (vod.area && vod.area.trim() !== '') {
-        return vod.area;
-    }
-    
-    // 默认显示空字符串
-    return '';
 }
 
 async function test(inReq, outResp) {
     try {
         const printErr = function (json) {
-            if (json.statusCode && json.statusCode == 500) {
+            if (json.statusCode && json.statusCode === 500) {
                 console.error(json);
             }
         };
+        
         const prefix = inReq.server.prefix;
         const dataResult = {};
         
@@ -296,15 +231,15 @@ async function test(inReq, outResp) {
             resp = await inReq.server.inject().post(`${prefix}/category`).payload({
                 id: dataResult.home.class[0].type_id,
                 page: 1,
-                filter: true,
-                filters: {},
+                filter: false,
+                extend: {}
             });
             dataResult.category = resp.json();
             printErr(resp.json());
             
             if (dataResult.category.list && dataResult.category.list.length > 0) {
                 resp = await inReq.server.inject().post(`${prefix}/detail`).payload({
-                    id: dataResult.category.list[0].vod_id,
+                    id: dataResult.category.list[0].vod_id
                 });
                 dataResult.detail = resp.json();
                 printErr(resp.json());
@@ -313,16 +248,15 @@ async function test(inReq, outResp) {
                     dataResult.play = [];
                     const vod = dataResult.detail.list[0];
                     if (vod.vod_play_url) {
-                        const urls = vod.vod_play_url.split('#');
-                        for (let i = 0; i < urls.length && i < 2; i++) {
-                            const playUrl = urls[i].split('$')[1];
-                            if (playUrl) {
-                                resp = await inReq.server
-                                    .inject()
+                        const playUrls = vod.vod_play_url.split('#');
+                        for (let i = 0; i < Math.min(playUrls.length, 2); i++) {
+                            const parts = playUrls[i].split('$');
+                            if (parts.length === 2) {
+                                resp = await inReq.server.inject()
                                     .post(`${prefix}/play`)
                                     .payload({
                                         flag: vod.vod_play_from,
-                                        id: playUrl,
+                                        id: parts[1]
                                     });
                                 dataResult.play.push(resp.json());
                             }
@@ -333,8 +267,8 @@ async function test(inReq, outResp) {
         }
         
         resp = await inReq.server.inject().post(`${prefix}/search`).payload({
-            wd: '爱',
-            page: 1,
+            wd: '测试',
+            page: 1
         });
         dataResult.search = resp.json();
         printErr(resp.json());
@@ -347,9 +281,24 @@ async function test(inReq, outResp) {
     }
 }
 
+// 辅助函数
+function getVideoList(data) {
+    if (!data) return [];
+    
+    return data.map(vod => {
+        let remarks = vod.updateInfo ? `更新至${vod.updateInfo}` : (vod.score || '');
+        return {
+            vod_id: vod.id.toString(),
+            vod_name: vod.name,
+            vod_pic: vod.pic,
+            vod_remarks: remarks
+        };
+    });
+}
+
 export default {
     meta: {
-        key: 'xpgtv',
+        key: 'xpg',
         name: '小苹果',
         type: 3,
     },
@@ -360,6 +309,7 @@ export default {
         fastify.post('/detail', detail);
         fastify.post('/play', play);
         fastify.post('/search', search);
+        fastify.get('/proxy/:what/:ids/:end', proxy);
         fastify.get('/test', test);
     },
 };
