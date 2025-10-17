@@ -286,7 +286,21 @@ function getVideoList(data) {
     if (!data) return [];
     
     return data.map(vod => {
-        let remarks = vod.updateInfo ? `更新至${vod.updateInfo}` : (vod.score || '');
+        let remarks = '';
+        if (vod.updateInfo) {
+            remarks = `更新至${vod.updateInfo}`;
+        } else if (vod.score && vod.score !== '0.0' && vod.score !== '0') {
+            remarks = vod.score;
+        } else if (vod.year) {
+            remarks = vod.year;
+        } else if (vod.area) {
+            remarks = vod.area;
+        } else if (vod.lang) {
+            remarks = vod.lang;
+        } else {
+            remarks = '';
+        }
+        
         return {
             vod_id: vod.id.toString(),
             vod_name: vod.name,
