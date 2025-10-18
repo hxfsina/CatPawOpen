@@ -292,58 +292,95 @@ async function play(inReq, _outResp) {
     const flag = inReq.body.flag;
     
     try {
-        // 1. 拼接解析接口地址
-        const parserUrl = `https://jx.hls.one/?url=${encodeURIComponent(id)}`;
-        console.log(`请求解析接口: ${parserUrl}`);
+        console.log(`播放请求: ${id}`);
         
-        // 2. 携带必要头信息请求解析接口
-        const response = await request(parserUrl, {
+        // 1. 调用解析接口获取网页播放器
+        const parseApi = `https://jx.hls.one/?url=${encodeURIComponent(id)}`;
+        console.log(`解析接口: ${parseApi}`);
+        
+        const html = await request(parseApi, {
             headers: {
-                "Referer": "https://jx.hls.one/", // 表明请求来自解析器页面
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.139 Safari/537.36"
-            }
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.139 Safari/537.36",
+                "Referer": "https://jx.hls.one/",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+            },
+            timeout: 15000
         });
         
-        let finalUrl = id; // 初始化最终地址为原始地址
-        let parse = 1; // 默认需要外部解析
+        console.log(`解析页面长度: ${html.length}`);
         
-        // 3. 从解析接口的响应中提取真实的m3u8地址
-        // 注意：此处需要根据接口返回的实际数据结构进行调整
-        const m3u8Match = response.match(/https?:\/\/[^"\'\s]*\.m3u8[^"\'\s]*/);
-        if (m3u8Match) {
-            finalUrl = m3u8Match[0];
-            console.log(`成功提取m3u8地址: ${finalUrl}`);
-            // 如果确认finalUrl是可直接播放的m3u8地址，则可以设置 parse = 0;
-            // 但为了保险起见，如果该m3u8地址仍需要特定请求头，则仍需通过parse=1由播放器处理
-            // parse = 0; 
+        // 2. 使用 cheerio 解析 HTML，提取真实 m3u8 地址
+        const $ = cheerio.load(html);
+        let m3u8Url = null;
+        
+        // 多种方式尝试提取 m3u8 地址
+        // 方式1: 从 video 标签获取
+        m3u8Url = $('video').attr('src');
+        if (m3u8Url && m3u8Url.includes('.m3u8')) {
+            console.log('从video标签提取到m3u8地址:', m3u8Url);
         } else {
-            // 如果无法从响应中提取出m3u8地址，则可能解析失败，fallback到原始地址并由播放器尝试解析
-            console.warn("未能从解析接口响应中提取出m3u8地址，将使用原始地址。");
-            finalUrl = id;
+            // 方式2: 从 source 标签获取
+            m3u8Url = $('source').attr('src');
+            if (m3u8Url && m3u8Url.includes('.m3u8')) {
+                console.log('从source标签提取到m3u8地址:', m3u8Url);
+            } else {
+                // 方式3: 从 JavaScript 代码中提取
+                const scriptTags = $('script');
+                for (let i = 0; i < scriptTags.length; i++) {
+                    const scriptContent = $(scriptTags[i]).html();
+                    if (scriptContent) {
+                        const m3u8Match = scriptContent.match(/(https?:\/\/[^"'\s]*\.m3u8[^"'\s]*)/);
+                        if (m3u8Match) {
+                            m3u8Url = m3u8Match[1];
+                            console.log('从JavaScript中提取到m3u8地址:', m3u8Url);
+                            break;
+                        }
+                    }
+                }
+                
+                // 方式4: 全局正则搜索
+                if (!m3u8Url) {
+                    const globalMatch = html.match(/(https?:\/\/[^"'\s]*\.m3u8[^"'\s]*)/);
+                    if (globalMatch) {
+                        m3u8Url = globalMatch[1];
+                        console.log('从全局搜索提取到m3u8地址:', m3u8Url);
+                    }
+                }
+            }
         }
         
-        // 4. 返回播放信息
-        // 注意：即使finalUrl是m3u8地址，播放器在请求它和后续ts文件时，也可能需要Referer等信息。
-        // 因此，将parse设置为1，表示希望播放器在请求媒体流时，能使用我们提供的header。
+        let finalUrl = id; // 默认使用原始URL
+        let parse = 1; // 默认需要解析
+        
+        if (m3u8Url) {
+            finalUrl = m3u8Url;
+            parse = 0; // 直接播放，不需要再解析
+            console.log('成功获取到真实m3u8地址，设置为直接播放');
+        } else {
+            console.log('未能提取到m3u8地址，使用原始URL');
+        }
+        
+        console.log(`最终播放配置: parse=${parse}, url=${finalUrl}`);
+        
+        // 3. 返回播放配置
         return {
-            parse: 1, // 非常重要：告知播放器使用提供的header去请求 finalUrl
+            parse: parse,
             url: finalUrl,
-            header: { // 这些头信息将用于播放器请求媒体流
+            header: {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.139 Safari/537.36",
-                "Referer": new URL(id).origin, // 通常设置为原始视频网站的域名
-                "Origin": new URL(id).origin   // 用于CORS场景
+                "Referer": "https://jx.hls.one/", // 重要：设置为解析器域名
+                "Origin": "https://jx.hls.one"
             }
         };
         
     } catch (error) {
-        console.error('播放地址获取失败:', error);
-        // 发生错误时，退回使用原始地址，并设置为需要解析
+        console.error('播放处理失败:', error);
         return {
             parse: 1,
             url: id,
             header: {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.139 Safari/537.36",
-                "Referer": new URL(id).origin,
+                "Referer": "https://jx.hls.one/"
             }
         };
     }
