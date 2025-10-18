@@ -1,4 +1,4 @@
-import req from './util/req.js';
+import req from '../../util/req.js';
 import * as cheerio from 'cheerio';
 
 const config = {
