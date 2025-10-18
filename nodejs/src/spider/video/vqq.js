@@ -300,9 +300,10 @@ async function play(inReq, _outResp) {
         
         const html = await request(parseApi, {
             headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.139 Safari/537.36",
+                "User-Agent": "Mozilla/5.0 (Linux; Android 9; TAS-AN00 Build/PQ3A.190705.08211809; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/91.0.4472.114 Safari/537.36",
                 "Referer": "https://jx.hls.one/",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+                "Accept": "*/*",
+                "Origin": "https://jx.hls.one"
             },
             timeout: 15000
         });
@@ -329,7 +330,8 @@ async function play(inReq, _outResp) {
                 for (let i = 0; i < scriptTags.length; i++) {
                     const scriptContent = $(scriptTags[i]).html();
                     if (scriptContent) {
-                        const m3u8Match = scriptContent.match(/(https?:\/\/[^"'\s]*\.m3u8[^"'\s]*)/);
+                        // 尝试匹配多种可能的m3u8地址格式
+                        const m3u8Match = scriptContent.match(/(https?:\/\/[^"'\s]+\.m3u8[^"'\s]*)/);
                         if (m3u8Match) {
                             m3u8Url = m3u8Match[1];
                             console.log('从JavaScript中提取到m3u8地址:', m3u8Url);
@@ -340,7 +342,7 @@ async function play(inReq, _outResp) {
                 
                 // 方式4: 全局正则搜索
                 if (!m3u8Url) {
-                    const globalMatch = html.match(/(https?:\/\/[^"'\s]*\.m3u8[^"'\s]*)/);
+                    const globalMatch = html.match(/(https?:\/\/[^"'\s]+\.m3u8[^"'\s]*)/);
                     if (globalMatch) {
                         m3u8Url = globalMatch[1];
                         console.log('从全局搜索提取到m3u8地址:', m3u8Url);
@@ -367,9 +369,10 @@ async function play(inReq, _outResp) {
             parse: parse,
             url: finalUrl,
             header: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.139 Safari/537.36",
+                "User-Agent": "Mozilla/5.0 (Linux; Android 9; TAS-AN00 Build/PQ3A.190705.08211809; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/91.0.4472.114 Safari/537.36",
                 "Referer": "https://jx.hls.one/", // 重要：设置为解析器域名
-                "Origin": "https://jx.hls.one"
+                "Origin": "https://jx.hls.one",
+                "Accept": "*/*"
             }
         };
         
@@ -379,8 +382,10 @@ async function play(inReq, _outResp) {
             parse: 1,
             url: id,
             header: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.139 Safari/537.36",
-                "Referer": "https://jx.hls.one/"
+                "User-Agent": "Mozilla/5.0 (Linux; Android 9; TAS-AN00 Build/PQ3A.190705.08211809; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/91.0.4472.114 Safari/537.36",
+                "Referer": "https://jx.hls.one/",
+                "Accept": "*/*",
+                "Origin": "https://jx.hls.one"
             }
         };
     }
