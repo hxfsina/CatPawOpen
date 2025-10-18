@@ -1,11 +1,12 @@
 import migu from './spider/video/migu.js';
 import apple from './spider/video/apple.js';
+import vqq from './spider/video/vqq.js';
 import push from './spider/video/push.js';
 import alist from './spider/pan/alist.js';
 import _13bqg from './spider/book/13bqg.js';
 import copymanga from './spider/book/copymanga.js';
 
-const spiders = [migu, apple, push, alist, _13bqg, copymanga];
+const spiders = [migu, apple, vqq, push, alist, _13bqg, copymanga];
 const spiderPrefix = '/spider';
 
 /**
