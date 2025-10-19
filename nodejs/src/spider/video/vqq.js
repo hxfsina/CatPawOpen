@@ -1,6 +1,5 @@
 import req from '../../util/req.js';
 import * as cheerio from 'cheerio';
-import puppeteer from 'puppeteer';
 
 const config = {
     host: 'https://v.qq.com',
@@ -226,82 +225,31 @@ async function detail(inReq, _outResp) {
 }
 
 async function play(inReq, _outResp) {
-    const id = inReq.body.id; // 原始视频详情页URL
+    const id = inReq.body.id; // 这是原始视频地址，例如：https://v.qq.com/x/cover/xxx/xxx.html
+    const flag = inReq.body.flag;
+
     try {
-        console.log(`播放请求: ${id}`);
+        console.log(`播放请求 - 原始地址: ${id}`);
 
-        // 1. 启动 Puppeteer 浏览器
-        const browser = await puppeteer.launch({
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
-        const page = await browser.newPage();
-
-        // 2. 设置 User-Agent
-        await page.setUserAgent(
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36'
-        );
-
-        // 3. 拦截请求，抓取 m3u8
-        let m3u8Url = null;
-        await page.setRequestInterception(true);
-        page.on('request', (req) => {
-            const url = req.url();
-            if (url.endsWith('.m3u8')) {
-                m3u8Url = url;
-            }
-            req.continue();
-        });
-
-        // 4. 打开解析器页面
-        const parseUrl = `https://jx.hls.one/?url=${encodeURIComponent(id)}`;
-        await page.goto(parseUrl, { waitUntil: 'networkidle2', timeout: 15000 });
-
-        // 5. 等待 video 标签加载
-        try {
-            await page.waitForSelector('video', { timeout: 5000 });
-            const videoSrc = await page.$eval('video', el => el.src);
-            if (videoSrc && videoSrc.includes('.m3u8')) {
-                m3u8Url = videoSrc;
-            }
-        } catch (e) {
-            // video 标签可能不存在
-        }
-
-        await browser.close();
-
-        let finalUrl = id;
-        let parse = 1;
-
-        if (m3u8Url) {
-            finalUrl = m3u8Url;
-            parse = 0;
-            console.log('成功获取 m3u8 地址:', m3u8Url);
-        } else {
-            console.log('未获取到 m3u8 地址，使用原始URL');
-        }
-
+        // 核心修复：直接返回原始地址，并标记为需要解析 (jx: 1)
+        // 这样OK影视APP会接管后续的解析工作
         return {
-            parse: parse,
-            url: finalUrl,
+            jx: 1,  // 关键参数：告知APP此地址需要它进行解析
+            url: id, // 关键参数：返回未经处理的原始URL
+            // 下面这些字段APP可能忽略，但可以保留
             header: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
-                "Referer": "https://jx.hls.one/",
-                "Origin": "https://jx.hls.one",
-                "Accept": "*/*"
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.139 Safari/537.36",
+                "Referer": new URL(id).origin,
             }
         };
+
     } catch (error) {
         console.error('播放处理失败:', error);
+        // 即使出错，也返回原始地址和 jx: 1
         return {
-            parse: 1,
+            jx: 1,
             url: id,
-            header: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
-                "Referer": "https://jx.hls.one/",
-                "Origin": "https://jx.hls.one",
-                "Accept": "*/*"
-            }
+            header: {}
         };
     }
 }
