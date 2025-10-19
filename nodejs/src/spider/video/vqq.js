@@ -1,5 +1,6 @@
 import req from '../../util/req.js';
 import * as cheerio from 'cheerio';
+import puppeteer from 'puppeteer';
 
 const config = {
     host: 'https://v.qq.com',
