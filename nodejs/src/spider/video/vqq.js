@@ -225,54 +225,24 @@ async function detail(inReq, _outResp) {
 }
 
 async function play(inReq, _outResp) {
-    const id = inReq.body.id; // 原始视频地址
-    const flag = inReq.body.flag;
-
+    const id = inReq.body.id;
+    
     try {
-        console.log(`播放请求 - 原始地址: ${id}`);
-        
-        // 构建解析URL
-        const parseUrl = `https://jx.hls.one/?url=${encodeURIComponent(id)}`;
-        
-        // 正确的方式：url放原始地址，Webview指令放extra
         return {
-            parse: 0,  // 0表示不解析
-            jx: 0,     // 0表示不解析  
-            url: id,   // 这里放原始视频地址
-            header: {},
-            extra: JSON.stringify([
-                {
-                    "action": "openInternalWebview",
-                    "opt": {
-                        "url": parseUrl
-                    }
-                },
-                {
-                    "action": "toast",
-                    "opt": {
-                        "message": "正在打开播放页面...",
-                        "duration": 2
-                    }
-                }
-            ])
-        };
-
-    } catch (error) {
-        console.error('播放处理失败:', error);
-        const parseUrl = `https://jx.hls.one/?url=${encodeURIComponent(id)}`;
-        return {
-            parse: 0,
-            jx: 0,
+            parse: 1,
+            jx: 1, 
             url: id,
-            header: {},
-            extra: JSON.stringify([
-                {
-                    "action": "openInternalWebview",
-                    "opt": {
-                        "url": parseUrl
-                    }
-                }
-            ])
+            header: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Referer": new URL(id).origin,
+            }
+        };
+    } catch (error) {
+        return {
+            parse: 1,
+            jx: 1,
+            url: id,
+            header: {}
         };
     }
 }
@@ -448,6 +418,14 @@ export default {
         key: 'tencent',
         name: '🐧『腾讯视频』',
         type: 3,
+        // 解析器配置
+        parses: [
+            {
+                name: "ikun",
+                type: 0,
+                url: "https://jx.hls.one/?url="
+            }
+        ]
     },
     api: async (fastify) => {
         fastify.post('/init', init);
