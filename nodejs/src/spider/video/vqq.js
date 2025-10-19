@@ -17,16 +17,6 @@ const headers = {
     "referer": "https://v.qq.com/"
 };
 
-// 解析器配置 - 对应你的 parses 配置
-const parsers = [
-    {
-        name: "ikun",
-        type: 0,
-        url: "https://jx.hls.one/?url="
-    }
-    // 可以添加更多解析器
-];
-
 async function request(url, options = {}) {
     const defaultOptions = {
         method: 'get',
