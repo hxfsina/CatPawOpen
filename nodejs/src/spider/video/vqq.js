@@ -224,23 +224,41 @@ async function detail(inReq, _outResp) {
 }
 
 async function play(inReq, _outResp) {
-    const id = inReq.body.id;
-    
+    const id = inReq.body.id; // 原始视频地址
+    const flag = inReq.body.flag;
+
     try {
+        console.log(`播放请求 - 原始地址: ${id}`);
+        
+        // 构建解析URL - 使用你的解析器
+        const parseUrl = `https://jx.hls.one/?url=${encodeURIComponent(id)}`;
+        
+        // 返回猫影视的Webview指令
         return {
-            parse: 1,
-            jx: 1, 
-            url: id,
-            header: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "Referer": new URL(id).origin,
-            }
+            parse: 0, // 0表示不解析，直接返回内容
+            jx: 0,    // 0表示不解析
+            url: JSON.stringify({
+                "action": "openInternalWebview",
+                "opt": {
+                    "url": parseUrl
+                }
+            }),
+            header: {}
         };
+
     } catch (error) {
+        console.error('播放处理失败:', error);
+        // 出错时也返回Webview指令
+        const parseUrl = `https://jx.hls.one/?url=${encodeURIComponent(id)}`;
         return {
-            parse: 1,
-            jx: 1,
-            url: id,
+            parse: 0,
+            jx: 0,
+            url: JSON.stringify({
+                "action": "openInternalWebview", 
+                "opt": {
+                    "url": parseUrl
+                }
+            }),
             header: {}
         };
     }
@@ -419,13 +437,6 @@ export default {
         key: 'tencent',
         name: '🐧『腾讯视频』',
         type: 3,
-        parses: [
-            {
-                name: "ikun",
-                type: 0,
-                url: "https://jx.hls.one/?url="
-            }
-        ]
     },
     api: async (fastify) => {
         fastify.post('/init', init);
