@@ -224,105 +224,24 @@ async function detail(inReq, _outResp) {
 }
 
 async function play(inReq, _outResp) {
-    const id = inReq.body.id; // 原始视频地址，如腾讯视频详情页链接
-    const flag = inReq.body.flag;
+    const id = inReq.body.id;
     
     try {
-        console.log(`播放请求: ${id}`);
-        
-        // 1. 调用解析接口获取网页播放器
-        const parseApi = `https://jx.hls.one/?url=${encodeURIComponent(id)}`;
-        console.log(`解析接口: ${parseApi}`);
-        
-        const html = await request(parseApi, {
-            headers: {
-                "User-Agent": "Mozilla/5.0 (Linux; Android 9; TAS-AN00 Build/PQ3A.190705.08211809; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/91.0.4472.114 Safari/537.36",
-                "Referer": "https://jx.hls.one/",
-                "Accept": "*/*",
-                "Origin": "https://jx.hls.one"
-            },
-            timeout: 15000
-        });
-        
-        console.log(`解析页面长度: ${html.length}`);
-        
-        // 2. 使用 cheerio 解析 HTML，提取真实 m3u8 地址
-        const $ = cheerio.load(html);
-        let m3u8Url = null;
-        
-        // 多种方式尝试提取 m3u8 地址
-        // 方式1: 从 video 标签获取
-        m3u8Url = $('video').attr('src');
-        if (m3u8Url && m3u8Url.includes('.m3u8')) {
-            console.log('从video标签提取到m3u8地址:', m3u8Url);
-        } else {
-            // 方式2: 从 source 标签获取
-            m3u8Url = $('source').attr('src');
-            if (m3u8Url && m3u8Url.includes('.m3u8')) {
-                console.log('从source标签提取到m3u8地址:', m3u8Url);
-            } else {
-                // 方式3: 从 JavaScript 代码中提取
-                const scriptTags = $('script');
-                for (let i = 0; i < scriptTags.length; i++) {
-                    const scriptContent = $(scriptTags[i]).html();
-                    if (scriptContent) {
-                        // 尝试匹配多种可能的m3u8地址格式
-                        const m3u8Match = scriptContent.match(/(https?:\/\/[^"'\s]+\.m3u8[^"'\s]*)/);
-                        if (m3u8Match) {
-                            m3u8Url = m3u8Match[1];
-                            console.log('从JavaScript中提取到m3u8地址:', m3u8Url);
-                            break;
-                        }
-                    }
-                }
-                
-                // 方式4: 全局正则搜索
-                if (!m3u8Url) {
-                    const globalMatch = html.match(/(https?:\/\/[^"'\s]+\.m3u8[^"'\s]*)/);
-                    if (globalMatch) {
-                        m3u8Url = globalMatch[1];
-                        console.log('从全局搜索提取到m3u8地址:', m3u8Url);
-                    }
-                }
-            }
-        }
-        
-        let finalUrl = id; // 默认使用原始URL
-        let parse = 1; // 默认需要解析
-        
-        if (m3u8Url) {
-            finalUrl = m3u8Url;
-            parse = 0; // 直接播放，不需要再解析
-            console.log('成功获取到真实m3u8地址，设置为直接播放');
-        } else {
-            console.log('未能提取到m3u8地址，使用原始URL');
-        }
-        
-        console.log(`最终播放配置: parse=${parse}, url=${finalUrl}`);
-        
-        // 3. 返回播放配置
-        return {
-            parse: parse,
-            url: finalUrl,
-            header: {
-                "User-Agent": "Mozilla/5.0 (Linux; Android 9; TAS-AN00 Build/PQ3A.190705.08211809; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/91.0.4472.114 Safari/537.36",
-                "Referer": "https://jx.hls.one/", // 重要：设置为解析器域名
-                "Origin": "https://jx.hls.one",
-                "Accept": "*/*"
-            }
-        };
-        
-    } catch (error) {
-        console.error('播放处理失败:', error);
         return {
             parse: 1,
+            jx: 1, 
             url: id,
             header: {
-                "User-Agent": "Mozilla/5.0 (Linux; Android 9; TAS-AN00 Build/PQ3A.190705.08211809; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/91.0.4472.114 Safari/537.36",
-                "Referer": "https://jx.hls.one/",
-                "Accept": "*/*",
-                "Origin": "https://jx.hls.one"
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Referer": new URL(id).origin,
             }
+        };
+    } catch (error) {
+        return {
+            parse: 1,
+            jx: 1,
+            url: id,
+            header: {}
         };
     }
 }
@@ -500,6 +419,13 @@ export default {
         key: 'tencent',
         name: '🐧『腾讯视频』',
         type: 3,
+        parses: [
+            {
+                name: "ikun",
+                type: 0,
+                url: "https://jx.hls.one/?url="
+            }
+        ]
     },
     api: async (fastify) => {
         fastify.post('/init', init);
