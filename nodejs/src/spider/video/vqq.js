@@ -17,16 +17,6 @@ const headers = {
     "referer": "https://v.qq.com/"
 };
 
-// 解析器配置 - 对应你的 parses 配置
-const parsers = [
-    {
-        name: "ikun",
-        type: 0,
-        url: "https://jx.hls.one/?url="
-    }
-    // 可以添加更多解析器
-];
-
 async function request(url, options = {}) {
     const defaultOptions = {
         method: 'get',
@@ -230,37 +220,44 @@ async function play(inReq, _outResp) {
     try {
         console.log(`播放请求 - 原始地址: ${id}`);
         
-        // 构建解析URL - 使用你的解析器
-        const parseUrl = `https://jx.hls.one/?url=${encodeURIComponent(id)}`;
+        // 构建解析API URL
+        const parseApiUrl = `http://nas.hxfkof.top:3051/?url=${encodeURIComponent(id)}`;
         
-        // 返回猫影视的Webview指令
-        return {
-            parse: 0, // 0表示不解析，直接返回内容
-            jx: 0,    // 0表示不解析
-            url: JSON.stringify({
-                "action": "openInternalWebview",
-                "opt": {
-                    "url": parseUrl
+        // 调用解析API获取真实地址（不加请求头）
+        console.log(`调用解析API: ${parseApiUrl}`);
+        const response = await req(parseApiUrl, {
+            method: 'GET'
+        });
+        
+        const result = response.data;
+        console.log('解析API返回:', result);
+        
+        if (result && result.url) {
+            // 成功获取到真实地址
+            const realUrl = result.url;
+            console.log(`获取到真实地址: ${realUrl}`);
+            
+            return {
+                parse: 0, // 0表示不解析，直接播放
+                jx: 0,    // 0表示不解析
+                url: realUrl, // 返回真实的m3u8地址
+                header: {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+                    "Accept": "*/*",
+                    "Accept-Encoding": "gzip, deflate, br, zstd",
+                    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+                    "Origin": "https://jx.hls.one"
                 }
-            }),
-            header: {}
-        };
+            };
+        } else {
+            throw new Error('解析API返回格式错误');
+        }
 
     } catch (error) {
         console.error('播放处理失败:', error);
-        // 出错时也返回Webview指令
-        const parseUrl = `https://jx.hls.one/?url=${encodeURIComponent(id)}`;
-        return {
-            parse: 0,
-            jx: 0,
-            url: JSON.stringify({
-                "action": "openInternalWebview", 
-                "opt": {
-                    "url": parseUrl
-                }
-            }),
-            header: {}
-        };
+        
+        // 直接抛出错误，不降级到Webview
+        throw error;
     }
 }
 
