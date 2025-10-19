@@ -225,30 +225,41 @@ async function detail(inReq, _outResp) {
 }
 
 async function play(inReq, _outResp) {
-    const id = inReq.body.id; // 这是原始视频地址，例如：https://v.qq.com/x/cover/xxx/xxx.html
+    const id = inReq.body.id; // 原始视频地址
     const flag = inReq.body.flag;
 
     try {
         console.log(`播放请求 - 原始地址: ${id}`);
-
-        // 核心修复：直接返回原始地址，并标记为需要解析 (jx: 1)
-        // 这样OK影视APP会接管后续的解析工作
+        
+        // 构建解析URL - 使用你的解析器
+        const parseUrl = `https://jx.hls.one/?url=${encodeURIComponent(id)}`;
+        
+        // 返回猫影视的Webview指令
         return {
-            jx: 1,  // 关键参数：告知APP此地址需要它进行解析
-            url: id, // 关键参数：返回未经处理的原始URL
-            // 下面这些字段APP可能忽略，但可以保留
-            header: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.139 Safari/537.36",
-                "Referer": new URL(id).origin,
-            }
+            parse: 0, // 0表示不解析，直接返回内容
+            jx: 0,    // 0表示不解析
+            url: JSON.stringify({
+                "action": "openInternalWebview",
+                "opt": {
+                    "url": parseUrl
+                }
+            }),
+            header: {}
         };
 
     } catch (error) {
         console.error('播放处理失败:', error);
-        // 即使出错，也返回原始地址和 jx: 1
+        // 出错时也返回Webview指令
+        const parseUrl = `https://jx.hls.one/?url=${encodeURIComponent(id)}`;
         return {
-            jx: 1,
-            url: id,
+            parse: 0,
+            jx: 0,
+            url: JSON.stringify({
+                "action": "openInternalWebview", 
+                "opt": {
+                    "url": parseUrl
+                }
+            }),
             header: {}
         };
     }
