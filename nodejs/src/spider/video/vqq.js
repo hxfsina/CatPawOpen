@@ -231,36 +231,48 @@ async function play(inReq, _outResp) {
     try {
         console.log(`播放请求 - 原始地址: ${id}`);
         
-        // 构建解析URL - 使用你的解析器
+        // 构建解析URL
         const parseUrl = `https://jx.hls.one/?url=${encodeURIComponent(id)}`;
         
-        // 返回猫影视的Webview指令
+        // 正确的方式：url放原始地址，Webview指令放extra
         return {
-            parse: 0, // 0表示不解析，直接返回内容
-            jx: 0,    // 0表示不解析
-            url: JSON.stringify({
-                "action": "openInternalWebview",
-                "opt": {
-                    "url": parseUrl
+            parse: 0,  // 0表示不解析
+            jx: 0,     // 0表示不解析  
+            url: id,   // 这里放原始视频地址
+            header: {},
+            extra: JSON.stringify([
+                {
+                    "action": "openInternalWebview",
+                    "opt": {
+                        "url": parseUrl
+                    }
+                },
+                {
+                    "action": "toast",
+                    "opt": {
+                        "message": "正在打开播放页面...",
+                        "duration": 2
+                    }
                 }
-            }),
-            header: {}
+            ])
         };
 
     } catch (error) {
         console.error('播放处理失败:', error);
-        // 出错时也返回Webview指令
         const parseUrl = `https://jx.hls.one/?url=${encodeURIComponent(id)}`;
         return {
             parse: 0,
             jx: 0,
-            url: JSON.stringify({
-                "action": "openInternalWebview", 
-                "opt": {
-                    "url": parseUrl
+            url: id,
+            header: {},
+            extra: JSON.stringify([
+                {
+                    "action": "openInternalWebview",
+                    "opt": {
+                        "url": parseUrl
+                    }
                 }
-            }),
-            header: {}
+            ])
         };
     }
 }
