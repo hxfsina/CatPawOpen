@@ -43,69 +43,6 @@ async function request(url, options = {}) {
     return res.data;
 }
 
-// 新增：通过外部解析器获取真实播放地址
-async function parseVideoUrl(originalUrl) {
-    try {
-        // 使用配置的第一个解析器
-        const parser = parsers[0];
-        const parseApi = `${parser.url}${encodeURIComponent(originalUrl)}`;
-        
-        console.log(`使用解析器: ${parser.name}, 解析URL: ${originalUrl}`);
-        
-        // 调用解析接口
-        const response = await request(parseApi, {
-            headers: {
-                "User-Agent": "okhttp/3.14.9",
-                "Referer": originalUrl
-            }
-        });
-        
-        // 解析响应，获取真实播放地址
-        // 这里需要根据具体解析器的返回格式进行调整
-        let realUrl = originalUrl; // 默认返回原URL
-        
-        if (typeof response === 'string') {
-            // 如果是字符串响应，尝试提取播放地址
-            const $ = cheerio.load(response);
-            
-            // 尝试多种选择器获取播放地址
-            const iframeSrc = $('iframe').attr('src');
-            const videoSrc = $('video source').attr('src');
-            const scriptContent = $('script').html();
-            
-            if (iframeSrc && iframeSrc.includes('http')) {
-                realUrl = iframeSrc;
-            } else if (videoSrc && videoSrc.includes('http')) {
-                realUrl = videoSrc;
-            } else if (scriptContent) {
-                // 从JavaScript代码中提取URL
-                const urlMatch = scriptContent.match(/http[^"']*\.(m3u8|mp4)[^"']*/);
-                if (urlMatch) {
-                    realUrl = urlMatch[0];
-                }
-            }
-        } else if (response && response.url) {
-            // 如果是JSON响应，包含url字段
-            realUrl = response.url;
-        }
-        
-        console.log(`解析结果: ${realUrl}`);
-        return realUrl;
-        
-    } catch (error) {
-        console.error('解析播放地址失败:', error);
-        return originalUrl; // 解析失败返回原URL
-    }
-}
-
-// 新增：检测是否为直接播放的URL
-function isDirectPlayUrl(url) {
-    return url.includes('.m3u8') || 
-           url.includes('.mp4') || 
-           url.includes('.flv') || 
-           url.includes('.avi') || 
-           url.includes('.mkv');
-}
 
 async function init(inReq, _outResp) {
     return {
@@ -460,30 +397,6 @@ async function search(inReq, _outResp) {
     }
 }
 
-
-
-// 新增：测试解析器的函数
-async function testParser(inReq, _outResp) {
-    const testUrl = inReq.body.url || 'https://v.qq.com/x/cover/mzc00200g36s4qd.html';
-    
-    try {
-        const result = await parseVideoUrl(testUrl);
-        return {
-            success: true,
-            originalUrl: testUrl,
-            parsedUrl: result,
-            isDirectPlay: isDirectPlayUrl(result),
-            parser: parsers[0].name
-        };
-    } catch (error) {
-        return {
-            success: false,
-            originalUrl: testUrl,
-            error: error.message,
-            parser: parsers[0].name
-        };
-    }
-}
 
 async function test(inReq, outResp) {
     try {
