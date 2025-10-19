@@ -226,18 +226,26 @@ async function detail(inReq, _outResp) {
 
 async function play(inReq, _outResp) {
     const id = inReq.body.id;
-    
+    const flag = inReq.body.flag;
+
     try {
+        console.log(`播放请求 - 原始地址: ${id}`);
+        
+        const parseUrl = `https://jx.hls.one/?url=${encodeURIComponent(id)}`;
+        
+        // 方案2：返回解析后的直链（如果解析器能返回m3u8等直链）
         return {
-            parse: 1,
-            jx: 1, 
-            url: id,
+            parse: 1,  // 0表示不需要解析（已经是直链）
+            jx: 1,     // 0表示不需要解析
+            url: parseUrl,  // 解析器地址
             header: {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "Referer": new URL(id).origin,
+                "Referer": "https://jx.hls.one/",
             }
         };
+
     } catch (error) {
+        console.error('播放处理失败:', error);
         return {
             parse: 1,
             jx: 1,
@@ -418,14 +426,6 @@ export default {
         key: 'tencent',
         name: '🐧『腾讯视频』',
         type: 3,
-        // 解析器配置
-        parses: [
-            {
-                name: "ikun",
-                type: 0,
-                url: "https://jx.hls.one/?url="
-            }
-        ]
     },
     api: async (fastify) => {
         fastify.post('/init', init);
