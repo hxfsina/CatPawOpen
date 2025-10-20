@@ -214,7 +214,7 @@ async function detail(inReq, _outResp) {
                 const mainInfo = episodes[0] || {};
                 let vod = {
                     vod_id: videoId,
-                    vod_name: re.sub(r'第\d+集', '', mainInfo.t3).strip() || '未知标题',
+                    vod_name: (mainInfo.t3 ? mainInfo.t3.replace(/第\d+集/, '').trim() : '未知标题'),
                     vod_pic: mainInfo.img || '',
                     vod_year: mainInfo.year || '',
                     vod_area: mainInfo.area || '',
