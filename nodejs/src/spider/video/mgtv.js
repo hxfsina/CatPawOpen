@@ -221,7 +221,7 @@ async function detail(inReq, _outResp) {
                     type_name: mainInfo.category || '',
                     vod_actor: mainInfo.actor || '',
                     vod_director: mainInfo.director || '',
-                    vod_content: mainInfo.desc || '',
+                    vod_content: mainInfo.t2 || '',
                     vod_remarks: mainInfo.t2 || '',
                     vod_play_from: '芒果TV',
                     vod_play_url: ''
