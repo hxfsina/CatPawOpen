@@ -214,7 +214,7 @@ async function detail(inReq, _outResp) {
                 const mainInfo = episodes[0] || {};
                 let vod = {
                     vod_id: videoId,
-                    vod_name: mainInfo.t1 || mainInfo.t4 || '未知标题',
+                    vod_name: mainInfo.t4 || mainInfo.t3 || '未知标题',
                     vod_pic: mainInfo.img || '',
                     vod_year: mainInfo.year || '',
                     vod_area: mainInfo.area || '',
@@ -232,7 +232,7 @@ async function detail(inReq, _outResp) {
                 episodes.forEach((episode, index) => {
                     if (episode.isIntact === "1") {
                         const playUrl = `https://www.mgtv.com${episode.url}`;
-                        const title = episode.t4 || `第${index + 1}集`;
+                        const title = `第${index + 1}集`;
                         playList.push(`${title}$${playUrl}`);
                     }
                 });
