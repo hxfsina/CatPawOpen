@@ -25,12 +25,11 @@ jobs:
           echo "nodejs/dist directory does not exist, skipping removal"
         fi
 
-    - name: Set npm registry and install dependencies
+    - name: Install dependencies
       working-directory: nodejs
       run: |
         npm config set registry https://registry.npmmirror.com/
-        rm -rf node_modules package-lock.json
-        npm ci --verbose
+        npm install --verbose
 
     - name: Build project
       working-directory: nodejs
