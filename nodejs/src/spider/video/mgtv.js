@@ -163,7 +163,7 @@ async function category(inReq, _outResp) {
                         vod_id: item.playPartId || `mgtv_${item.id}`,
                         vod_name: item.title,
                         vod_pic: item.img,
-                        vod_remarks: item.updateInfo || item.rightCorner?.text || ''
+                        vod_remarks: item.updateInfo || item.rightCorner?.text || item.year
                     });
                 }
             });
