@@ -159,8 +159,10 @@ async function category(inReq, _outResp) {
         if (data && data.data && data.data.hitDocs) {
             data.data.hitDocs.forEach(item => {
                 if (item.title && item.img) {
+                    // 构建详细信息字符串：title|subtitle|year|story
+                    const infoStr = `${item.title}|${item.subtitle || ''}|${item.year || ''}|${item.story || ''}`;
                     videos.push({
-                        vod_id: item.playPartId || `mgtv_${item.id}`,
+                        vod_id: `${infoStr}$${item.playPartId || `mgtv_${item.id}`}`,
                         vod_name: item.title,
                         vod_pic: item.img,
                         vod_remarks: item.updateInfo || item.rightCorner?.text || item.year
@@ -195,9 +197,27 @@ async function detail(inReq, _outResp) {
     try {
         for (const id of ids) {
             let videoId = id;
+            let title = '';
+            let subtitle = '';
+            let year = '';
+            let story = '';
+            let isFromCategory = false;
             
-            // 处理搜索结果的ID格式（分类$视频ID）
-            if (id.includes('$')) {
+            // 处理分类列表的ID格式（信息$视频ID）
+            if (id.includes('$') && id.includes('|')) {
+                const parts = id.split('$');
+                if (parts.length === 2) {
+                    // 解析详细信息：title|subtitle|year|story
+                    const infoParts = parts[0].split('|');
+                    title = infoParts[0] || '';
+                    subtitle = infoParts[1] || '';
+                    year = infoParts[2] || '';
+                    story = infoParts[3] || '';
+                    videoId = parts[1];
+                    isFromCategory = true;
+                }
+            } else if (id.includes('$')) {
+                // 处理搜索结果的ID格式（分类$视频ID）
                 const parts = id.split('$');
                 if (parts.length === 2) {
                     videoId = parts[1];
@@ -214,18 +234,30 @@ async function detail(inReq, _outResp) {
                 const mainInfo = episodes[0] || {};
                 let vod = {
                     vod_id: videoId,
-                    vod_name: (mainInfo.t3 ? mainInfo.t3.replace(/第\d+集/, '').trim() : '未知标题'),
                     vod_pic: mainInfo.img || '',
-                    vod_year: mainInfo.year || '',
                     vod_area: mainInfo.area || '',
                     type_name: mainInfo.category || '',
-                    vod_actor: mainInfo.actor || '',
                     vod_director: mainInfo.director || '',
-                    vod_content: mainInfo.t2 || '',
-                    vod_remarks: mainInfo.t2 || '',
                     vod_play_from: '芒果TV',
                     vod_play_url: ''
                 };
+                
+                // 区分来源设置不同的字段
+                if (isFromCategory) {
+                    // 来自分类列表，使用传递的信息
+                    vod.vod_name = title || (mainInfo.t3 ? mainInfo.t3.replace(/第\d+集/, '').trim() : '未知标题');
+                    vod.vod_actor = subtitle || mainInfo.actor || '';
+                    vod.vod_year = year || mainInfo.year || '';
+                    vod.vod_content = story || mainInfo.t2 || '';
+                    vod.vod_remarks = mainInfo.t2 || '';
+                } else {
+                    // 来自搜索列表，使用详情API的信息
+                    vod.vod_name = (mainInfo.t3 ? mainInfo.t3.replace(/第\d+集/, '').trim() : '未知标题');
+                    vod.vod_actor = mainInfo.actor || '';
+                    vod.vod_year = mainInfo.year || '';
+                    vod.vod_content = mainInfo.t2 || '';
+                    vod.vod_remarks = mainInfo.t2 || '';
+                }
                 
                 // 处理播放列表
                 const playList = [];
