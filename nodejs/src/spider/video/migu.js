@@ -86,7 +86,7 @@ async function category(inReq, _outResp) {
             page: parseInt(page),
             pagecount: 9999,
             limit: 20,
-            total: 99999,
+            total: 999999,
             list: videos,
         };
     } catch (error) {
