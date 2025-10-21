@@ -43,39 +43,40 @@ async function home(_inReq, _outResp) {
 async function category(inReq, _outResp) {
     const tid = inReq.body.id;
     const pg = inReq.body.page;
-    const extend = inReq.body.filters || {}; // 获取过滤参数
+    const extend = inReq.body.filters || {};
     
     let page = pg || 1;
     if (page == 0) page = 1;
 
     try {
-        //console.log(`获取分类内容: tid=${tid}, page=${page}, filters=`, extend);
+        console.log(`获取分类内容: tid=${tid}, page=${page}, filters=`, extend);
         
-        // 构建查询参数 - 包含分类ID、页码和过滤参数
+        // 构建查询参数
         const params = new URLSearchParams({
             cid: tid,
             page: page.toString()
         });
         
-        // 添加过滤参数
+        // 根据咪咕视频实际的过滤器key名称添加参数
         if (extend.mediaType) params.append('mediaType', extend.mediaType);
         if (extend.mediaArea) params.append('mediaArea', extend.mediaArea);
         if (extend.mediaYear) params.append('mediaYear', extend.mediaYear);
         if (extend.rankingType) params.append('rankingType', extend.rankingType);
         if (extend.payType) params.append('payType', extend.payType);
-        if (extend.sort) params.append('sort', extend.sort);
-        if (extend.area) params.append('area', extend.area);
-        if (extend.year) params.append('year', extend.year);
-        if (extend.class) params.append('class', extend.class);
+        
+        // 删除这些不存在的key检查
+        // if (extend.sort) params.append('sort', extend.sort);
+        // if (extend.area) params.append('area', extend.area); 
+        // if (extend.year) params.append('year', extend.year);
+        // if (extend.class) params.append('class', extend.class);
         
         const response = await req.get(`${API_BASE}/api/category?${params.toString()}`);
         
         const data = response.data.data;
         const videos = data.list || [];
         
-        //console.log(`成功获取 ${videos.length} 个视频`);
+        console.log(`成功获取 ${videos.length} 个视频`);
 
-        // 返回CatPawOpen需要的格式
         const hasMore = videos.length >= 20;
         return {
             page: parseInt(page),
