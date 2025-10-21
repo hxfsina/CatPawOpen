@@ -57,18 +57,23 @@ async function category(inReq, _outResp) {
             page: page.toString()
         });
         
-        // 根据咪咕视频实际的过滤器key名称添加参数
+        // 添加所有可能的过滤器参数
+        // 通用过滤器
         if (extend.mediaType) params.append('mediaType', extend.mediaType);
         if (extend.mediaArea) params.append('mediaArea', extend.mediaArea);
         if (extend.mediaYear) params.append('mediaYear', extend.mediaYear);
         if (extend.rankingType) params.append('rankingType', extend.rankingType);
         if (extend.payType) params.append('payType', extend.payType);
         
-        // 删除这些不存在的key检查
-        // if (extend.sort) params.append('sort', extend.sort);
-        // if (extend.area) params.append('area', extend.area); 
-        // if (extend.year) params.append('year', extend.year);
-        // if (extend.class) params.append('class', extend.class);
+        // 特殊分类的过滤器
+        if (extend.hotType) params.append('hotType', extend.hotType);           // 热门榜
+        if (extend.contentType) params.append('contentType', extend.contentType); // 4K专区
+        if (extend.area) params.append('area', extend.area);                    // 电视直播地区
+        if (extend.sportType) params.append('sportType', extend.sportType);     // 体育类型
+        if (extend.matchStatus) params.append('matchStatus', extend.matchStatus); // 比赛状态
+        if (extend.matchdate) params.append('matchdate', extend.matchdate);     // 比赛时间
+        
+        console.log(`请求URL: ${API_BASE}/api/category?${params.toString()}`);
         
         const response = await req.get(`${API_BASE}/api/category?${params.toString()}`);
         
