@@ -82,10 +82,22 @@ async function category(inReq, _outResp) {
         
         console.log(`成功获取 ${videos.length} 个视频`);
        
+        // 动态设置limit
+        let limit = 20; // 默认值
+        
+        // 如果是热门榜分类，设置limit为30
+        if (tid === 'hotlist' || extend.hotType) {
+            limit = 30;
+        }
+        // 可以继续添加其他特殊分类的limit设置
+        // else if (tid === '其他分类ID') {
+        //     limit = 其他值;
+        // }
+       
         return {
             page: parseInt(page),
             pagecount: 9999,
-            limit: 20,
+            limit: limit,
             total: 999999,
             list: videos,
         };
