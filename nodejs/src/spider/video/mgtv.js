@@ -134,7 +134,7 @@ async function homeVideoContent(_inReq, _outResp) {
 async function category(inReq, _outResp) {
     const tid = inReq.body.id;
     const pg = inReq.body.page || 1;
-    const extend = inReq.body.extend || {};
+    const extend = inReq.body.filters || {}; // 修改这里：使用filters而不是extend
     
     try {
         // 构建分类URL
