@@ -31,13 +31,13 @@ async function home(_inReq, _outResp) {
 
     const data = response.data.data;
     const classes = data.class || [];
-    const filterses = data.filters || [];  
+    const filters = data.filters || [];  
 
     //console.log(`成功获取 ${classes.length} 个分类`);
     
     return {
-      class: classes
-      filters: filterses
+      class: classes,
+      filters: filters
     };
   } catch (error) {
     //console.error('获取首页分类失败:', error.message);
