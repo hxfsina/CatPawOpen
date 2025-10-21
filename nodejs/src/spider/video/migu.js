@@ -30,13 +30,13 @@ async function home(_inReq, _outResp) {
     //}
 
     const data = response.data.data;
-    const class = data.class || [];
+    const classes = data.class || [];
     const filters = data.filters || [];  
 
     //console.log(`成功获取 ${classes.length} 个分类`);
     
     return {
-      class: class
+      class: classes
       filters: filters
     };
   } catch (error) {
