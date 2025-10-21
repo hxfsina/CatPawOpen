@@ -78,27 +78,41 @@ async function category(inReq, _outResp) {
         const response = await req.get(`${API_BASE}/api/category?${params.toString()}`);
         
         const data = response.data.data;
-        const videos = data.list || [];
+        const allVideos = data.list || [];
         
-        console.log(`成功获取 ${videos.length} 个视频`);
-       
-        // 动态设置limit
-        let limit = 20; // 默认值
+        console.log(`API返回 ${allVideos.length} 个视频`);
         
-        // 如果是热门榜分类，设置limit为30
-        if (tid === 'hotlist' || extend.hotType) {
-            limit = 30;
+        // 统一使用20作为每页大小
+        const limit = 20;
+        
+        // 判断是否为热门版块
+        const isHotlist = tid === 'hotlist' || extend.hotType;
+        
+        let videos = allVideos;
+        let totalPages = 9999;
+        let totalVideos = 999999;
+        
+        if (isHotlist) {
+            // 热门版块：手动分页，计算真实的总页数和总数
+            const startIndex = (page - 1) * limit;
+            const endIndex = Math.min(startIndex + limit, allVideos.length);
+            videos = allVideos.slice(startIndex, endIndex);
+            
+            // 计算总页数：总数/20，有余数就+1
+            totalPages = Math.ceil(allVideos.length / limit);
+            totalVideos = allVideos.length;
+            
+            console.log(`热门榜手动分页: 从 ${startIndex} 到 ${endIndex}, 显示 ${videos.length} 个视频, 共 ${totalPages} 页, 总数 ${totalVideos}`);
+        } else {
+            // 非热门版块：直接返回API数据，使用固定的大数值
+            console.log(`非热门版块: 显示 ${allVideos.length} 个视频, 使用固定分页信息`);
         }
-        // 可以继续添加其他特殊分类的limit设置
-        // else if (tid === '其他分类ID') {
-        //     limit = 其他值;
-        // }
-       
+        
         return {
             page: parseInt(page),
-            pagecount: 9999,
+            pagecount: totalPages,
             limit: limit,
-            total: 999999,
+            total: totalVideos,
             list: videos,
         };
     } catch (error) {
