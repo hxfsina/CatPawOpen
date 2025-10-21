@@ -57,23 +57,18 @@ async function category(inReq, _outResp) {
             page: page.toString()
         });
         
-        // 添加所有可能的过滤器参数
-        // 通用过滤器
+        // 添加过滤器参数
         if (extend.mediaType) params.append('mediaType', extend.mediaType);
         if (extend.mediaArea) params.append('mediaArea', extend.mediaArea);
         if (extend.mediaYear) params.append('mediaYear', extend.mediaYear);
         if (extend.rankingType) params.append('rankingType', extend.rankingType);
         if (extend.payType) params.append('payType', extend.payType);
-        
-        // 特殊分类的过滤器
-        if (extend.hotType) params.append('hotType', extend.hotType);           // 热门榜
-        if (extend.contentType) params.append('contentType', extend.contentType); // 4K专区
-        if (extend.area) params.append('area', extend.area);                    // 电视直播地区
-        if (extend.sportType) params.append('sportType', extend.sportType);     // 体育类型
-        if (extend.matchStatus) params.append('matchStatus', extend.matchStatus); // 比赛状态
-        if (extend.matchdate) params.append('matchdate', extend.matchdate);     // 比赛时间
-        
-        console.log(`请求URL: ${API_BASE}/api/category?${params.toString()}`);
+        if (extend.hotType) params.append('hotType', extend.hotType);
+        if (extend.contentType) params.append('contentType', extend.contentType);
+        if (extend.area) params.append('area', extend.area);
+        if (extend.sportType) params.append('sportType', extend.sportType);
+        if (extend.matchStatus) params.append('matchStatus', extend.matchStatus);
+        if (extend.matchdate) params.append('matchdate', extend.matchdate);
         
         const response = await req.get(`${API_BASE}/api/category?${params.toString()}`);
         
@@ -81,20 +76,47 @@ async function category(inReq, _outResp) {
         const videos = data.list || [];
         
         console.log(`成功获取 ${videos.length} 个视频`);
+        
+        // 当API不返回总数时，采用保守的分页策略
+        const currentPage = parseInt(page);
+        const limit = 20;
+        
+        // 关键策略：根据返回的数据量判断是否还有下一页
+        let pagecount = currentPage;
+        let total = videos.length;
+        
+        // 如果当前页返回的数据量等于每页限制，假设可能还有更多数据
+        if (videos.length === limit) {
+            pagecount = currentPage + 1; // 假设还有下一页
+            total = currentPage * limit + 1; // 保守估计总数
+        } else if (videos.length > 0 && videos.length < limit) {
+            // 如果返回的数据量小于限制，说明这是最后一页
+            pagecount = currentPage;
+            total = (currentPage - 1) * limit + videos.length;
+        } else if (videos.length === 0 && currentPage > 1) {
+            // 如果返回空数据且不是第一页，说明没有更多数据
+            pagecount = currentPage - 1;
+            total = (currentPage - 1) * limit;
+        }
+        
+        // 对于第一页且没有数据的情况
+        if (currentPage === 1 && videos.length === 0) {
+            pagecount = 1;
+            total = 0;
+        }
 
-        const hasMore = videos.length >= 20;
         return {
-            page: parseInt(page),
-            pagecount: hasMore ? parseInt(page) + 1 : parseInt(page),
-            limit: 20,
-            total: hasMore ? 3000 : videos.length,
+            page: currentPage,
+            pagecount: pagecount,
+            limit: limit,
+            total: total,
             list: videos,
         };
     } catch (error) {
         console.error('获取分类内容失败:', error);
         return {
             page: parseInt(page),
-            pagecount: 1,
+            pagecount: parseInt(page),
             limit: 20,
             total: 0,
             list: []
