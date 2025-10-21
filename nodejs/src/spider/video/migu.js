@@ -21,27 +21,23 @@ async function init(inReq, _outResp) {
 }
 
 async function home(_inReq, _outResp) {
-  try {
-    //console.log('获取咪咕视频首页分类...');
-    const response = await req.get(`${API_BASE}/api/categories`);
-    
-    //if (response.data.code !== 200) {
-    //  throw new Error(`API返回错误: ${response.data.msg}`);
-    //}
-
-    const data = response.data.data;
-    const classes = data.class || [];
-    const filters = data.filters || [];  
-
-    //console.log(`成功获取 ${classes.length} 个分类`);
-    
-    return {
-      class: classes,
-      filters: filters
-    };
-  } catch (error) {
-    //console.error('获取首页分类失败:', error.message);
-  }
+    try {
+        const response = await req.get(`${API_BASE}/api/categories`);
+        const data = response.data.data;
+        
+        return {
+            class: data.class || [],
+            filters: data.filters || {},
+            list: [] // 必须包含list字段，即使为空
+        };
+    } catch (error) {
+        console.error('获取首页分类失败:', error);
+        return {
+            class: [],
+            filters: {},
+            list: []
+        };
+    }
 }
 
 async function category(inReq, _outResp) {
