@@ -57,6 +57,12 @@ async function category(inReq, _outResp) {
             page: page.toString()
         });
         
+        // 判断是否为热门版块
+        const isHotlist = tid === 'hotlist' || extend.hotType;
+        
+        // 根据版块类型设置每页大小
+        const limit = isHotlist ? 30 : 20;
+        
         // 添加所有可能的过滤器参数
         // 通用过滤器
         if (extend.mediaType) params.append('mediaType', extend.mediaType);
@@ -78,34 +84,29 @@ async function category(inReq, _outResp) {
         const response = await req.get(`${API_BASE}/api/category?${params.toString()}`);
         
         const data = response.data.data;
-        const allVideos = data.list || [];
+        const videos = data.list || [];
         
-        console.log(`API返回 ${allVideos.length} 个视频`);
+        console.log(`API返回 ${videos.length} 个视频, 每页 ${limit} 条`);
         
-        // 统一使用20作为每页大小
-        const limit = 20;
-        
-        // 判断是否为热门版块
-        const isHotlist = tid === 'hotlist' || extend.hotType;
-        
-        let videos = allVideos;
+        // 设置分页信息
         let totalPages = 9999;
         let totalVideos = 999999;
         
-        if (isHotlist) {
-            // 热门版块：手动分页，计算真实的总页数和总数
-            const startIndex = (page - 1) * limit;
-            const endIndex = Math.min(startIndex + limit, allVideos.length);
-            videos = allVideos.slice(startIndex, endIndex);
-            
-            // 计算总页数：总数/20，有余数就+1
-            totalPages = Math.ceil(allVideos.length / limit);
-            totalVideos = allVideos.length;
-            
-            console.log(`热门榜手动分页: 从 ${startIndex} 到 ${endIndex}, 显示 ${videos.length} 个视频, 共 ${totalPages} 页, 总数 ${totalVideos}`);
+        // 如果API返回了分页信息，使用API的信息
+        if (data.total && data.pagecount) {
+            totalPages = data.pagecount;
+            totalVideos = data.total;
         } else {
-            // 非热门版块：直接返回API数据，使用固定的大数值
-            console.log(`非热门版块: 显示 ${allVideos.length} 个视频, 使用固定分页信息`);
+            // 如果没有分页信息，根据返回数据量估算
+            if (videos.length < limit) {
+                // 如果返回的数据量小于每页限制，说明这是最后一页
+                totalPages = page;
+                totalVideos = (page - 1) * limit + videos.length;
+            } else {
+                // 如果返回的数据量等于每页限制，可能还有更多数据
+                totalPages = page + 1;
+                totalVideos = page * limit + 1;
+            }
         }
         
         return {
