@@ -450,14 +450,29 @@ async function detail(inReq, _outResp) {
             
             if (data && data.c) {
                 const v = data.c;
+                
+                // 处理分类信息 - 展平嵌套数组
+                let typeName = '';
+                if (data.typ && Array.isArray(data.typ)) {
+                    const flatTypes = data.typ.flat().filter(item => item && typeof item === 'string');
+                    typeName = flatTypes.join(',');
+                }
+                
+                // 处理演员信息 - 展平二维数组
+                let actors = '';
+                if (data.nam && Array.isArray(data.nam)) {
+                    const flatActors = data.nam.flat().filter(item => item && typeof item === 'string');
+                    actors = flatActors.join(',');
+                }
+                
                 let vod = {
                     vod_id: videoId,
                     vod_name: v.title || '未知标题',
                     vod_pic: v.pic || '',
                     vod_year: v.year || '',
-                    vod_area: v.area || '',
-                    type_name: data.typ ? data.typ.join(',') : '',
-                    vod_actor: data.nam ? data.nam.join(',') : '',
+                    vod_area: v.area  || '',
+                    type_name: typeName,
+                    vod_actor: actors,
                     vod_director: v.director || '',
                     vod_content: v.description || '',
                     vod_remarks: data.rec || '',
@@ -466,15 +481,15 @@ async function detail(inReq, _outResp) {
                 };
                 
                 // 处理播放列表 - 生成需要解析的原始URL
-                if (data.c.video_ids && data.c.video_ids.length > 0) {
+                if (v.video_ids && v.video_ids.length > 0) {
                     const playList = [];
                     
-                    if (data.c.video_ids.length === 1) {
-                        const vid = data.c.video_ids[0];
+                    if (v.video_ids.length === 1) {
+                        const vid = v.video_ids[0];
                         const playUrl = `https://v.qq.com/x/cover/${videoId}/${vid}.html`;
                         playList.push(`正片$${playUrl}`);
                     } else {
-                        data.c.video_ids.forEach((vid, index) => {
+                        v.video_ids.forEach((vid, index) => {
                             const playUrl = `https://v.qq.com/x/cover/${videoId}/${vid}.html`;
                             playList.push(`第${index + 1}集$${playUrl}`);
                         });
