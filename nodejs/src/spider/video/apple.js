@@ -104,7 +104,7 @@ async function home(_inReq, _outResp) {
 async function category(inReq, _outResp) {
     const tid = inReq.body.id;
     const pg = inReq.body.page || 1;
-    const filters = inReq.body.filters || {}; // 改为使用 filters
+    const filters = inReq.body.filters || {}; // 使用 filters 而不是 extend
     
     // 构建请求参数
     const params = {
@@ -112,7 +112,7 @@ async function category(inReq, _outResp) {
         type: tid
     };
     
-    // 添加过滤参数
+    // 添加过滤参数 - 注意这里的 key 要与 home 函数中的 filter key 对应
     if (filters.area && filters.area !== 'all') {
         params.area = filters.area;
     }
