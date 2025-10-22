@@ -342,7 +342,7 @@ async function category(inReq, _outResp) {
                 videos.push({
                     vod_id: url || `${tid}_${index}`,
                     vod_name: title,
-                    vod_pic: pic.startsWith('http') ? pic : `${config.host}${pic}`,
+                    vod_pic: pic.startsWith('http') ? pic : `http:${pic}`,
                     vod_remarks: desc
                 });
             }
