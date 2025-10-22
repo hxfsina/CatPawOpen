@@ -475,7 +475,7 @@ async function play(inReq, _outResp) {
                 header: {
                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
                     "Accept": "*/*",
-                    "Accept-Encoding": "gzip, deflate, br, zstd",
+                    //"Accept-Encoding": "gzip, deflate, br, zstd",
                     "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
                     "Origin": "https://jx.hls.one"
                 }
