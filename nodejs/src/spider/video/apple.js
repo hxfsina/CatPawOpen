@@ -25,11 +25,49 @@ async function home(_inReq, _outResp) {
     const data = await request(`${host}/api.php/v2.vod/androidtypes`);
     
     let classes = [];
+    let filters = [];
+    
     for (const item of data.data) {
         classes.push({
             type_id: item.type_id.toString(),
             type_name: item.type_name
         });
+        
+        // 构建过滤对象
+        let filterObj = {
+            key: item.type_id.toString(),
+            name: item.type_name,
+            value: []
+        };
+        
+        // 添加分类筛选
+        if (item.classes && item.classes.length > 0 && item.classes[0] !== '') {
+            filterObj.value.push({
+                n: '类型',
+                v: 'class',
+                options: item.classes.map(cls => ({ n: cls, v: cls }))
+            });
+        }
+        
+        // 添加地区筛选
+        if (item.areas && item.areas.length > 0 && item.areas[0] !== '') {
+            filterObj.value.push({
+                n: '地区',
+                v: 'area',
+                options: item.areas.map(area => ({ n: area, v: area }))
+            });
+        }
+        
+        // 添加年份筛选
+        if (item.years && item.years.length > 0 && item.years[0] !== '') {
+            filterObj.value.push({
+                n: '年份',
+                v: 'year',
+                options: item.years.map(year => ({ n: year, v: year }))
+            });
+        }
+        
+        filters.push(filterObj);
     }
 
     // 获取首页视频内容
@@ -41,7 +79,8 @@ async function home(_inReq, _outResp) {
 
     return {
         class: classes,
-        list: videos
+        list: videos,
+        filters: filters
     };
 }
 
