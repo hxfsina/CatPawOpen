@@ -72,12 +72,7 @@ async function init(inReq, _outResp) {
 
 async function home(_inReq, _outResp) {
     try {
-        // 获取首页数据
-        const homeUrl = `${config.host}${config.homeUrl}`;
-        const html = await request(homeUrl);
-        const $ = cheerio.load(html);
-        
-        // 解析分类
+        // 使用腾讯视频的分类，但按照猫影视格式组织
         const classes = [
             { type_id: 'choice', type_name: '精选' },
             { type_id: 'movie', type_name: '电影' },
@@ -88,7 +83,7 @@ async function home(_inReq, _outResp) {
             { type_id: 'doco', type_name: '纪录片' }
         ];
 
-        // 构建过滤器 - 按照猫影视正确格式
+        // 构建过滤器 - 使用腾讯视频的实际参数
         const filters = {
             "movie": [
                 {
@@ -102,7 +97,7 @@ async function home(_inReq, _outResp) {
                 },
                 {
                     "key": "year",
-                    "name": "年代", 
+                    "name": "年代",
                     "value": [
                         {"n": "全部", "v": "-1"},
                         {"n": "2025", "v": "2025"},
@@ -110,18 +105,6 @@ async function home(_inReq, _outResp) {
                         {"n": "2023", "v": "2023"},
                         {"n": "2022", "v": "2022"},
                         {"n": "2021", "v": "2021"}
-                    ]
-                },
-                {
-                    "key": "type",
-                    "name": "类型",
-                    "value": [
-                        {"n": "全部", "v": "-1"},
-                        {"n": "犯罪", "v": "4"},
-                        {"n": "喜剧", "v": "100004"},
-                        {"n": "爱情", "v": "100005"},
-                        {"n": "科幻", "v": "100012"},
-                        {"n": "悬疑", "v": "100009"}
                     ]
                 }
             ],
@@ -146,18 +129,6 @@ async function home(_inReq, _outResp) {
                         {"n": "2022", "v": "2022"},
                         {"n": "2021", "v": "2021"}
                     ]
-                },
-                {
-                    "key": "feature",
-                    "name": "类型",
-                    "value": [
-                        {"n": "全部", "v": "-1"},
-                        {"n": "爱情", "v": "1"},
-                        {"n": "古装", "v": "2"},
-                        {"n": "悬疑", "v": "3"},
-                        {"n": "都市", "v": "4"},
-                        {"n": "喜剧", "v": "6"}
-                    ]
                 }
             ],
             "cartoon": [
@@ -179,124 +150,60 @@ async function home(_inReq, _outResp) {
                         {"n": "日本", "v": "2"},
                         {"n": "欧美", "v": "3"}
                     ]
-                },
-                {
-                    "key": "type",
-                    "name": "类型",
-                    "value": [
-                        {"n": "全部", "v": "-1"},
-                        {"n": "玄幻", "v": "9"},
-                        {"n": "科幻", "v": "4"},
-                        {"n": "武侠", "v": "13"},
-                        {"n": "冒险", "v": "3"},
-                        {"n": "战斗", "v": "5"}
-                    ]
-                }
-            ],
-            "variety": [
-                {
-                    "key": "sort",
-                    "name": "排序",
-                    "value": [
-                        {"n": "最热", "v": "75"},
-                        {"n": "最新", "v": "23"}
-                    ]
-                },
-                {
-                    "key": "iyear",
-                    "name": "年代",
-                    "value": [
-                        {"n": "全部", "v": "-1"},
-                        {"n": "2025", "v": "2025"},
-                        {"n": "2024", "v": "2024"},
-                        {"n": "2023", "v": "2023"},
-                        {"n": "2022", "v": "2022"}
-                    ]
-                }
-            ],
-            "child": [
-                {
-                    "key": "sort",
-                    "name": "排序",
-                    "value": [
-                        {"n": "最热", "v": "75"},
-                        {"n": "最新", "v": "76"}
-                    ]
-                },
-                {
-                    "key": "area",
-                    "name": "地区",
-                    "value": [
-                        {"n": "全部", "v": "-1"},
-                        {"n": "内地", "v": "3"},
-                        {"n": "日本", "v": "2"}
-                    ]
-                }
-            ],
-            "doco": [
-                {
-                    "key": "sort",
-                    "name": "排序",
-                    "value": [
-                        {"n": "最热", "v": "75"},
-                        {"n": "最新", "v": "74"}
-                    ]
-                },
-                {
-                    "key": "type",
-                    "name": "类型",
-                    "value": [
-                        {"n": "全部", "v": "-1"},
-                        {"n": "自然", "v": "4"},
-                        {"n": "美食", "v": "10"},
-                        {"n": "社会", "v": "3"}
-                    ]
-                }
-            ],
-            "choice": [
-                {
-                    "key": "sort",
-                    "name": "排序",
-                    "value": [
-                        {"n": "最热", "v": "75"},
-                        {"n": "最新", "v": "83"}
-                    ]
-                },
-                {
-                    "key": "iyear",
-                    "name": "年代",
-                    "value": [
-                        {"n": "全部", "v": "-1"},
-                        {"n": "2025", "v": "2025"},
-                        {"n": "2024", "v": "2024"},
-                        {"n": "2023", "v": "2023"}
-                    ]
                 }
             ]
         };
 
-        // 解析首页推荐视频
+        // 为其他分类添加基本过滤器
+        ["choice", "variety", "child", "doco"].forEach(type => {
+            if (!filters[type]) {
+                filters[type] = [
+                    {
+                        "key": "sort",
+                        "name": "排序",
+                        "value": [
+                            {"n": "最热", "v": "75"},
+                            {"n": "最新", "v": "83"}
+                        ]
+                    }
+                ];
+            }
+        });
+
+        // 获取首页推荐视频
+        const homeUrl = `${config.host}${config.homeUrl}`;
+        const html = await request(homeUrl);
+        const $ = cheerio.load(html);
+        
         const videos = [];
         $('.list_item').each((index, element) => {
             const $el = $(element);
-            const title = $el.find('img').attr('alt') || '';
-            const pic = $el.find('img').attr('src') || '';
-            const desc = $el.find('a').text() || '';
-            const url = $el.find('a').attr('data-float') || '';
+            
+            // 提取标题
+            const title = $el.find('.figure_title').text()?.trim() || $el.find('img').attr('alt') || '';
+            
+            // 提取图片URL并修复协议问题
+            let pic = $el.find('img.figure_pic').attr('src') || '';
+            if (pic && pic.startsWith('//')) {
+                pic = 'https:' + pic;
+            }
+            
+            // 提取视频ID - 从data-float属性获取
+            const videoId = $el.find('a.figure').attr('data-float') || '';
             
             if (title && pic) {
                 videos.push({
-                    vod_id: url || `video_${index}`,
+                    vod_id: videoId || `video_${index}`,
                     vod_name: title,
-                    vod_pic: pic.startsWith('http') ? pic : `${config.host}${pic}`,
-                    vod_remarks: desc
+                    vod_pic: pic,
+                    vod_remarks: ''
                 });
             }
         });
 
         return {
             class: classes,
-            filters: filters, // 添加过滤器
+            filters: filters,
             list: videos
         };
     } catch (error) {
@@ -312,22 +219,30 @@ async function home(_inReq, _outResp) {
 async function category(inReq, _outResp) {
     const tid = inReq.body.id;
     const pg = inReq.body.page || 1;
-    const extend = inReq.body.extend || {};
+    const filters = inReq.body.filters || {}; // 猫影视使用filters参数
     
     try {
         // 构建分类URL
         let url = `${config.host}/x/bu/pagesheet/list?_all=1&append=1&channel=${tid}&listpage=1&offset=${(pg-1)*21}&pagesize=21&iarea=-1`;
         
-        // 添加过滤参数
-        if (extend.sort) {
-            url += `&sort=${extend.sort}`;
+        // 添加过滤参数 - 使用腾讯视频的实际参数名
+        if (filters.sort && filters.sort !== '-1') {
+            url += `&sort=${filters.sort}`;
         }
-        if (extend.iyear && extend.iyear !== '-1') {
-            url += `&iyear=${extend.iyear}`;
+        
+        if (filters.year && filters.year !== '-1') {
+            url += `&year=${filters.year}`;
         }
-        if (extend.year && extend.year !== '-1') {
-            url += `&year=${extend.year}`;
+        
+        if (filters.iyear && filters.iyear !== '-1') {
+            url += `&iyear=${filters.iyear}`;
         }
+        
+        if (filters.area && filters.area !== '-1') {
+            url += `&iarea=${filters.area}`;
+        }
+        
+        console.log('分类请求URL:', url); // 调试日志
         
         const html = await request(url);
         const $ = cheerio.load(html);
@@ -342,16 +257,14 @@ async function category(inReq, _outResp) {
             // 提取图片URL并修复协议问题
             let pic = $el.find('img.figure_pic').attr('src') || '';
             if (pic && pic.startsWith('//')) {
-                // 处理以//开头的URL，添加https协议
                 pic = 'https:' + pic;
             }
-            // 其他情况保持不变（包括https开头和相对路径）
-    
+            
             // 提取视频ID - 从data-float属性获取
             const videoId = $el.find('a.figure').attr('data-float') || '';
             
             // 提取视频类型标记（VIP、独播等）
-            const mark = $el.find('.mark_v').attr('alt') || '';
+            const mark = $el.find('img.mark_v').attr('alt') || '';
             
             if (title && pic) {
                 videos.push({
