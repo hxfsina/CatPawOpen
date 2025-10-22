@@ -189,7 +189,35 @@ async function category(inReq, _outResp) {
         };
     }
 }
-
+/*
+"list": [
+            {
+                "t4": "第1集",
+                "img": "http://3img.hitv.com/preview/sp_images/2025/09/14/202509141704117831031.jpg_220x125.jpg",
+                "src_clip_id": "685612",
+                "isnew": "0",
+                "isvip": "0",
+                "url": "/b/685612/23498180.html",
+                "isIntact": "1",
+                "corner": [
+                    {
+                        "area": "rightDown",
+                        "flag": "5",
+                        "color": "#FFFFFF",
+                        "font": "第1集"
+                    }
+                ],
+                "clip_id": "685612",
+                "time": "47:23",
+                "contentType": "0",
+                "t1": "1",
+                "t2": "刘向上一家上演“回家囧途”",
+                "next_id": "23498205",
+                "t3": "欢乐家长群2 第1集",
+                "ts": "2025-09-13 09:17:01.0",
+                "video_id": "23498180"
+            }
+*/
 async function detail(inReq, _outResp) {
     const ids = !Array.isArray(inReq.body.id) ? [inReq.body.id] : inReq.body.id;
     const videos = [];
