@@ -5,9 +5,7 @@ const config = {
     host: 'https://v.qq.com',
     homeUrl: '/x/bu/pagesheet/list?_all=1&append=1&channel=cartoon&listpage=1&offset=0&pagesize=21&iarea=-1&sort=18',
     searchUrl: 'https://pbaccess.video.qq.com/trpc.videosearch.smartboxServer.HttpRountRecall/Smartbox?query=**&appID=3172&appKey=lGhFIPeD3HsO9xEp&pageNum=(fypage-1)&pageSize=10',
-    detailUrl: 'https://node.video.qq.com/x/api/float_vinfo2?cid=fyid',
-    // 外部解析配置
-    parseUrl: 'https://jx.hls.one/?url='
+    detailUrl: 'https://node.video.qq.com/x/api/float_vinfo2?cid=fyid'
 };
 
 const headers = {
@@ -32,12 +30,43 @@ async function request(url, options = {}) {
     return res.data;
 }
 
+// 直接从JS规则中提取的vod1函数
+async function vod1(ids) {
+    let html1 = await request('https://pbaccess.video.qq.com/trpc.videosearch.mobile_search.MultiTerminalSearch/MbSearch?vplatform=2', {
+        method: 'POST',
+        body: JSON.stringify({
+            "version": "25042201",
+            "clientType": 1,
+            "filterValue": "",
+            "uuid": "B1E50847-D25F-4C4B-BBA0-36F0093487F6",
+            "retry": 0,
+            "query": ids,
+            "pagenum": 0,
+            "isPrefetch": true,
+            "pagesize": 30,
+            "queryFrom": 0,
+            "searchDatakey": "",
+            "transInfo": "",
+            "isneedQc": true,
+            "preQid": "",
+            "adClientInfo": "",
+            "extraInfo": {
+                "isNewMarkLabel": "1",
+                "multi_terminal_pc": "1",
+                "themeType": "1",
+                "sugRelatedIds": "{}",
+                "appVersion": ""
+            }
+        })
+    });
+    return html1;
+}
+
 async function init(inReq, _outResp) {
     return {
         host: config.host,
         searchUrl: config.searchUrl,
-        detailUrl: config.detailUrl,
-        parsers: parsers.map(p => p.name) // 返回可用的解析器
+        detailUrl: config.detailUrl
     };
 }
 
@@ -58,6 +87,193 @@ async function home(_inReq, _outResp) {
             { type_id: 'child', type_name: '少儿' },
             { type_id: 'doco', type_name: '纪录片' }
         ];
+
+        // 构建过滤器 - 按照猫影视正确格式
+        const filters = {
+            "movie": [
+                {
+                    "key": "sort",
+                    "name": "排序",
+                    "value": [
+                        {"n": "最热", "v": "75"},
+                        {"n": "最新", "v": "83"},
+                        {"n": "好评", "v": "81"}
+                    ]
+                },
+                {
+                    "key": "year",
+                    "name": "年代", 
+                    "value": [
+                        {"n": "全部", "v": "-1"},
+                        {"n": "2025", "v": "2025"},
+                        {"n": "2024", "v": "2024"},
+                        {"n": "2023", "v": "2023"},
+                        {"n": "2022", "v": "2022"},
+                        {"n": "2021", "v": "2021"}
+                    ]
+                },
+                {
+                    "key": "type",
+                    "name": "类型",
+                    "value": [
+                        {"n": "全部", "v": "-1"},
+                        {"n": "犯罪", "v": "4"},
+                        {"n": "喜剧", "v": "100004"},
+                        {"n": "爱情", "v": "100005"},
+                        {"n": "科幻", "v": "100012"},
+                        {"n": "悬疑", "v": "100009"}
+                    ]
+                }
+            ],
+            "tv": [
+                {
+                    "key": "sort",
+                    "name": "排序",
+                    "value": [
+                        {"n": "最热", "v": "75"},
+                        {"n": "最新", "v": "79"},
+                        {"n": "好评", "v": "16"}
+                    ]
+                },
+                {
+                    "key": "iyear",
+                    "name": "年代",
+                    "value": [
+                        {"n": "全部", "v": "-1"},
+                        {"n": "2025", "v": "2025"},
+                        {"n": "2024", "v": "2024"},
+                        {"n": "2023", "v": "2023"},
+                        {"n": "2022", "v": "2022"},
+                        {"n": "2021", "v": "2021"}
+                    ]
+                },
+                {
+                    "key": "feature",
+                    "name": "类型",
+                    "value": [
+                        {"n": "全部", "v": "-1"},
+                        {"n": "爱情", "v": "1"},
+                        {"n": "古装", "v": "2"},
+                        {"n": "悬疑", "v": "3"},
+                        {"n": "都市", "v": "4"},
+                        {"n": "喜剧", "v": "6"}
+                    ]
+                }
+            ],
+            "cartoon": [
+                {
+                    "key": "sort",
+                    "name": "排序",
+                    "value": [
+                        {"n": "最热", "v": "75"},
+                        {"n": "最新", "v": "83"},
+                        {"n": "好评", "v": "81"}
+                    ]
+                },
+                {
+                    "key": "area",
+                    "name": "地区",
+                    "value": [
+                        {"n": "全部", "v": "-1"},
+                        {"n": "内地", "v": "1"},
+                        {"n": "日本", "v": "2"},
+                        {"n": "欧美", "v": "3"}
+                    ]
+                },
+                {
+                    "key": "type",
+                    "name": "类型",
+                    "value": [
+                        {"n": "全部", "v": "-1"},
+                        {"n": "玄幻", "v": "9"},
+                        {"n": "科幻", "v": "4"},
+                        {"n": "武侠", "v": "13"},
+                        {"n": "冒险", "v": "3"},
+                        {"n": "战斗", "v": "5"}
+                    ]
+                }
+            ],
+            "variety": [
+                {
+                    "key": "sort",
+                    "name": "排序",
+                    "value": [
+                        {"n": "最热", "v": "75"},
+                        {"n": "最新", "v": "23"}
+                    ]
+                },
+                {
+                    "key": "iyear",
+                    "name": "年代",
+                    "value": [
+                        {"n": "全部", "v": "-1"},
+                        {"n": "2025", "v": "2025"},
+                        {"n": "2024", "v": "2024"},
+                        {"n": "2023", "v": "2023"},
+                        {"n": "2022", "v": "2022"}
+                    ]
+                }
+            ],
+            "child": [
+                {
+                    "key": "sort",
+                    "name": "排序",
+                    "value": [
+                        {"n": "最热", "v": "75"},
+                        {"n": "最新", "v": "76"}
+                    ]
+                },
+                {
+                    "key": "area",
+                    "name": "地区",
+                    "value": [
+                        {"n": "全部", "v": "-1"},
+                        {"n": "内地", "v": "3"},
+                        {"n": "日本", "v": "2"}
+                    ]
+                }
+            ],
+            "doco": [
+                {
+                    "key": "sort",
+                    "name": "排序",
+                    "value": [
+                        {"n": "最热", "v": "75"},
+                        {"n": "最新", "v": "74"}
+                    ]
+                },
+                {
+                    "key": "type",
+                    "name": "类型",
+                    "value": [
+                        {"n": "全部", "v": "-1"},
+                        {"n": "自然", "v": "4"},
+                        {"n": "美食", "v": "10"},
+                        {"n": "社会", "v": "3"}
+                    ]
+                }
+            ],
+            "choice": [
+                {
+                    "key": "sort",
+                    "name": "排序",
+                    "value": [
+                        {"n": "最热", "v": "75"},
+                        {"n": "最新", "v": "83"}
+                    ]
+                },
+                {
+                    "key": "iyear",
+                    "name": "年代",
+                    "value": [
+                        {"n": "全部", "v": "-1"},
+                        {"n": "2025", "v": "2025"},
+                        {"n": "2024", "v": "2024"},
+                        {"n": "2023", "v": "2023"}
+                    ]
+                }
+            ]
+        };
 
         // 解析首页推荐视频
         const videos = [];
@@ -80,12 +296,14 @@ async function home(_inReq, _outResp) {
 
         return {
             class: classes,
+            filters: filters, // 添加过滤器
             list: videos
         };
     } catch (error) {
         console.error('首页数据获取失败:', error);
         return {
             class: [],
+            filters: {},
             list: []
         };
     }
@@ -100,16 +318,14 @@ async function category(inReq, _outResp) {
         // 构建分类URL
         let url = `${config.host}/x/bu/pagesheet/list?_all=1&append=1&channel=${tid}&listpage=1&offset=${(pg-1)*21}&pagesize=21&iarea=-1`;
         
-        // 添加过滤参数
-        if (extend.sort) {
-            url += `&sort=${extend.sort}`;
-        }
-        if (extend.iyear && extend.iyear !== '-1') {
-            url += `&iyear=${extend.iyear}`;
-        }
-        if (extend.year && extend.year !== '-1') {
-            url += `&year=${extend.year}`;
-        }
+        // 添加过滤参数 - 使用动态参数处理
+        Object.keys(extend).forEach(key => {
+            if (extend[key] && extend[key] !== '-1' && extend[key] !== 'all') {
+                url += `&${key}=${extend[key]}`;
+            }
+        });
+        
+        console.log('分类请求URL:', url); // 调试日志
         
         const html = await request(url);
         const $ = cheerio.load(html);
@@ -296,46 +512,17 @@ async function search(inReq, _outResp) {
     const pg = inReq.body.page || 1;
     
     try {
-        // 构建搜索URL
-        const searchUrl = config.searchUrl
-            .replace('**', encodeURIComponent(wd))
-            .replace('(fypage-1)', (pg - 1));
-        
-        const data = await request(searchUrl, {
-            method: 'POST',
-            body: JSON.stringify({
-                "version": "25042201",
-                "clientType": 1,
-                "filterValue": "",
-                "uuid": "B1E50847-D25F-4C4B-BBA0-36F0093487F6",
-                "retry": 0,
-                "query": wd,
-                "pagenum": pg - 1,
-                "isPrefetch": true,
-                "pagesize": 30,
-                "queryFrom": 0,
-                "searchDatakey": "",
-                "transInfo": "",
-                "isneedQc": true,
-                "preQid": "",
-                "adClientInfo": "",
-                "extraInfo": {
-                    "isNewMarkLabel": "1",
-                    "multi_terminal_pc": "1",
-                    "themeType": "1",
-                    "sugRelatedIds": "{}",
-                    "appVersion": ""
-                }
-            })
-        });
+        // 使用vod1函数进行搜索
+        const html = await vod1(wd);
+        const json = JSON.parse(html);
         
         const videos = [];
         
         // 解析搜索结果
-        if (data && data.data) {
+        if (json.data) {
             // 普通搜索结果
-            if (data.data.normalList && data.data.normalList.itemList) {
-                data.data.normalList.itemList.forEach(item => {
+            if (json.data.normalList && json.data.normalList.itemList) {
+                json.data.normalList.itemList.forEach(item => {
                     if (item.videoInfo && item.doc && item.doc.id.length > 11) {
                         videos.push({
                             vod_id: item.doc.id,
@@ -348,8 +535,8 @@ async function search(inReq, _outResp) {
             }
             
             // 区域搜索结果
-            if (data.data.areaBoxList && data.data.areaBoxList.length > 0) {
-                data.data.areaBoxList[0].itemList.forEach(item => {
+            if (json.data.areaBoxList && json.data.areaBoxList.length > 0) {
+                json.data.areaBoxList[0].itemList.forEach(item => {
                     if (item.videoInfo && item.videoInfo.title.includes(wd) && 
                         item.doc && item.doc.id.length > 11) {
                         videos.push({
@@ -381,9 +568,6 @@ async function search(inReq, _outResp) {
         };
     }
 }
-
-
-
 
 async function test(inReq, outResp) {
     try {
@@ -457,7 +641,6 @@ async function test(inReq, outResp) {
         return { err: err.message, tip: 'check debug console output' };
     }
 }
-
 
 export default {
     meta: {
