@@ -451,8 +451,6 @@ async function play(inReq, _outResp) {
 
     } catch (error) {
         console.error('播放处理失败:', error);
-        
-        // 直接抛出错误，不降级到Webview
         throw error;
     }
 }
