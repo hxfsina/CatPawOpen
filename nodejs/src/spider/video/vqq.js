@@ -428,8 +428,8 @@ async function play(inReq, _outResp) {
         const result = response.data;
         console.log('解析API返回:', result);
         
-        if (result && result.url) {
-            // 成功获取到真实地址
+        if (result && result.url && result.url !== '未抓取到 m3u8') {
+            // 成功获取到真实地址且不是错误信息
             const realUrl = result.url;
             console.log(`获取到真实地址: ${realUrl}`);
             
@@ -446,12 +446,44 @@ async function play(inReq, _outResp) {
                 }
             };
         } else {
-            throw new Error('解析API返回格式错误');
+            // 解析失败或返回"未抓取到 m3u8"，使用原始URL并让播放器自己解析
+            console.log('解析API返回无效地址，使用原始URL并让播放器解析');
+            const originalUrl = id.split("?")[0]; // 去除参数，保留基础URL
+            
+            return {
+                parse: 0, // 0表示不解析
+                jx: 1,    // 1表示需要播放器自己解析
+                url: originalUrl,
+                header: {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+                    "Accept": "*/*",
+                    "Accept-Encoding": "gzip, deflate, br, zstd",
+                    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+                    "Origin": "https://v.qq.com",
+                    "Referer": "https://v.qq.com/"
+                }
+            };
         }
 
     } catch (error) {
         console.error('播放处理失败:', error);
-        throw error;
+        // 发生异常时也使用原始URL并让播放器解析
+        console.log('发生异常，使用原始URL并让播放器解析');
+        const originalUrl = id.split("?")[0];
+        
+        return {
+            parse: 0,
+            jx: 1,
+            url: originalUrl,
+            header: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+                "Accept": "*/*",
+                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+                "Origin": "https://v.qq.com",
+                "Referer": "https://v.qq.com/"
+            }
+        };
     }
 }
 
