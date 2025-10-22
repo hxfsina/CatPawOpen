@@ -217,6 +217,7 @@ async function category(inReq, _outResp) {
                 "ts": "2025-09-13 09:17:01.0",
                 "video_id": "23498180"
             }
+    ]
 */
 async function detail(inReq, _outResp) {
     const ids = !Array.isArray(inReq.body.id) ? [inReq.body.id] : inReq.body.id;
