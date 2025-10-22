@@ -87,16 +87,27 @@ async function home(_inReq, _outResp) {
 async function category(inReq, _outResp) {
     const tid = inReq.body.id;
     const pg = inReq.body.page || 1;
-    const extend = inReq.body.extend || {};
+    const filters = inReq.body.filters || {}; // 改为使用 filters
     
+    // 构建请求参数
     const params = {
         page: pg,
-        type: tid,
-        area: extend.area || '',
-        year: extend.year || '',
-        sortby: extend.sortby || '',
-        class: extend.classes || ''
+        type: tid
     };
+    
+    // 添加过滤参数
+    if (filters.area && filters.area !== 'all') {
+        params.area = filters.area;
+    }
+    if (filters.year && filters.year !== 'all') {
+        params.year = filters.year;
+    }
+    if (filters.class && filters.class !== 'all') {
+        params.class = filters.class;
+    }
+    if (filters.sortby && filters.sortby !== 'all') {
+        params.sortby = filters.sortby;
+    }
     
     // 过滤空参数
     const filteredParams = {};
@@ -104,19 +115,29 @@ async function category(inReq, _outResp) {
         if (value) filteredParams[key] = value;
     }
     
-    const data = await request(`${host}/api.php/v2.vod/androidfilter10086`, {
-        params: filteredParams
-    });
-    
-    return {
-        page: parseInt(pg),
-        pagecount: 9999,
-        limit: 90,
-        total: 999999,
-        list: getVideoList(data.data)
-    };
+    try {
+        const data = await request(`${host}/api.php/v2.vod/androidfilter10086`, {
+            params: filteredParams
+        });
+        
+        return {
+            page: parseInt(pg),
+            pagecount: 9999,
+            limit: 90,
+            total: 999999,
+            list: getVideoList(data.data)
+        };
+    } catch (error) {
+        console.error('分类数据获取失败:', error);
+        return {
+            page: parseInt(pg),
+            pagecount: 1,
+            limit: 90,
+            total: 0,
+            list: []
+        };
+    }
 }
-
 async function detail(inReq, _outResp) {
     const ids = !Array.isArray(inReq.body.id) ? [inReq.body.id] : inReq.body.id;
     const videos = [];
