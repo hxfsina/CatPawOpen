@@ -318,14 +318,16 @@ async function category(inReq, _outResp) {
         // 构建分类URL
         let url = `${config.host}/x/bu/pagesheet/list?_all=1&append=1&channel=${tid}&listpage=1&offset=${(pg-1)*21}&pagesize=21&iarea=-1`;
         
-        // 添加过滤参数 - 使用动态参数处理
-        Object.keys(extend).forEach(key => {
-            if (extend[key] && extend[key] !== '-1' && extend[key] !== 'all') {
-                url += `&${key}=${extend[key]}`;
-            }
-        });
-        
-        console.log('分类请求URL:', url); // 调试日志
+        // 添加过滤参数
+        if (extend.sort) {
+            url += `&sort=${extend.sort}`;
+        }
+        if (extend.iyear && extend.iyear !== '-1') {
+            url += `&iyear=${extend.iyear}`;
+        }
+        if (extend.year && extend.year !== '-1') {
+            url += `&year=${extend.year}`;
+        }
         
         const html = await request(url);
         const $ = cheerio.load(html);
@@ -333,17 +335,33 @@ async function category(inReq, _outResp) {
         const videos = [];
         $('.list_item').each((index, element) => {
             const $el = $(element);
-            const title = $el.find('img').attr('alt') || '';
-            const pic = $el.find('img').attr('src') || '';
-            const desc = $el.find('a').text() || '';
-            const url = $el.find('a').attr('data-float') || '';
+            
+            // 提取标题
+            const title = $el.find('.figure_title').text()?.trim() || $el.find('img').attr('alt') || '';
+            
+            // 提取图片URL并修复协议问题
+            let pic = $el.find('img.figure_pic').attr('src') || '';
+            if (pic && pic.startsWith('//')) {
+                // 处理以//开头的URL，添加https协议
+                pic = 'https:' + pic;
+            }
+            // 其他情况保持不变（包括https开头和相对路径）
+            
+            // 提取描述 - 从.figure_desc的title属性获取
+            const desc = $el.find('.figure_desc').attr('title') || $el.find('.figure_desc').text() || '';
+            
+            // 提取视频ID - 从data-float属性获取
+            const videoId = $el.find('a.figure').attr('data-float') || '';
+            
+            // 提取视频类型标记（VIP、独播等）
+            const mark = $el.find('.mark_v').attr('alt') || '';
             
             if (title && pic) {
                 videos.push({
-                    vod_id: url || `${tid}_${index}`,
+                    vod_id: videoId || `${tid}_${index}`,
                     vod_name: title,
-                    vod_pic: pic.startsWith('http') ? pic : `http:${pic}`,
-                    vod_remarks: desc
+                    vod_pic: pic,
+                    vod_remarks: mark // 只保留标记信息
                 });
             }
         });
