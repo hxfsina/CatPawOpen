@@ -30,38 +30,6 @@ async function request(url, options = {}) {
     return res.data;
 }
 
-// 直接从JS规则中提取的vod1函数
-async function vod1(ids) {
-    let html1 = await request('https://pbaccess.video.qq.com/trpc.videosearch.mobile_search.MultiTerminalSearch/MbSearch?vplatform=2', {
-        method: 'POST',
-        body: JSON.stringify({
-            "version": "25042201",
-            "clientType": 1,
-            "filterValue": "",
-            "uuid": "B1E50847-D25F-4C4B-BBA0-36F0093487F6",
-            "retry": 0,
-            "query": ids,
-            "pagenum": 0,
-            "isPrefetch": true,
-            "pagesize": 30,
-            "queryFrom": 0,
-            "searchDatakey": "",
-            "transInfo": "",
-            "isneedQc": true,
-            "preQid": "",
-            "adClientInfo": "",
-            "extraInfo": {
-                "isNewMarkLabel": "1",
-                "multi_terminal_pc": "1",
-                "themeType": "1",
-                "sugRelatedIds": "{}",
-                "appVersion": ""
-            }
-        })
-    });
-    return html1;
-}
-
 async function init(inReq, _outResp) {
     return {
         host: config.host,
@@ -592,49 +560,61 @@ async function search(inReq, _outResp) {
     const pg = inReq.body.page || 1;
     
     try {
-        // 使用vod1函数进行搜索
+        // 使用原始规则中的搜索逻辑
         const html = await vod1(wd);
         const json = JSON.parse(html);
         
         const videos = [];
         
-        // 解析搜索结果
+        console.log('搜索返回数据:', JSON.stringify(json, null, 2)); // 调试日志
+        
+        // 解析搜索结果 - 按照原始规则逻辑
         if (json.data) {
-            // 普通搜索结果
+            // 1. 处理normalList
             if (json.data.normalList && json.data.normalList.itemList) {
                 json.data.normalList.itemList.forEach(item => {
-                    if (item.videoInfo && item.doc && item.doc.id.length > 11) {
-                        videos.push({
-                            vod_id: item.doc.id,
-                            vod_name: item.videoInfo.title,
-                            vod_pic: item.videoInfo.imgUrl,
-                            vod_remarks: item.videoInfo.desc || ''
-                        });
+                    try {
+                        if (item.doc && item.doc.id && item.doc.id.length > 11) {
+                            videos.push({
+                                vod_id: item.doc.id,
+                                vod_name: item.videoInfo?.title || '未知标题',
+                                vod_pic: item.videoInfo?.imgUrl || '',
+                                vod_remarks: item.videoInfo?.desc || ''
+                            });
+                        }
+                    } catch (e) {
+                        console.log('normalList item处理失败:', e);
                     }
                 });
             }
             
-            // 区域搜索结果
+            // 2. 处理areaBoxList - 按照原始规则逻辑
             if (json.data.areaBoxList && json.data.areaBoxList.length > 0) {
                 json.data.areaBoxList[0].itemList.forEach(item => {
-                    if (item.videoInfo && item.videoInfo.title.includes(wd) && 
-                        item.doc && item.doc.id.length > 11) {
-                        videos.push({
-                            vod_id: item.doc.id,
-                            vod_name: item.videoInfo.title,
-                            vod_pic: item.videoInfo.imgUrl,
-                            vod_remarks: item.videoInfo.desc || ''
-                        });
+                    try {
+                        if (item.doc && item.doc.id && item.doc.id.length > 11 && 
+                            item.videoInfo && item.videoInfo.title.includes(wd)) {
+                            videos.push({
+                                vod_id: item.doc.id,
+                                vod_name: item.videoInfo.title,
+                                vod_pic: item.videoInfo.imgUrl || '',
+                                vod_remarks: item.videoInfo.desc || ''
+                            });
+                        }
+                    } catch (e) {
+                        console.log('areaBoxList item处理失败:', e);
                     }
                 });
             }
         }
         
+        console.log(`搜索"${wd}"找到${videos.length}个结果`);
+        
         return {
             page: parseInt(pg),
             pagecount: 10,
             limit: 20,
-            total: 100,
+            total: videos.length,
             list: videos
         };
     } catch (error) {
@@ -647,6 +627,38 @@ async function search(inReq, _outResp) {
             list: []
         };
     }
+}
+
+// 保持vod1函数与原始规则一致
+async function vod1(ids) {
+    let html1 = await request('https://pbaccess.video.qq.com/trpc.videosearch.mobile_search.MultiTerminalSearch/MbSearch?vplatform=2', {
+        method: 'POST',
+        body: JSON.stringify({
+            "version": "25042201",
+            "clientType": 1,
+            "filterValue": "",
+            "uuid": "B1E50847-D25F-4C4B-BBA0-36F0093487F6",
+            "retry": 0,
+            "query": ids,
+            "pagenum": 0,
+            "isPrefetch": true,
+            "pagesize": 30,
+            "queryFrom": 0,
+            "searchDatakey": "",
+            "transInfo": "",
+            "isneedQc": true,
+            "preQid": "",
+            "adClientInfo": "",
+            "extraInfo": {
+                "isNewMarkLabel": "1",
+                "multi_terminal_pc": "1",
+                "themeType": "1",
+                "sugRelatedIds": "{}",
+                "appVersion": ""
+            }
+        })
+    });
+    return html1;
 }
 
 async function test(inReq, outResp) {
