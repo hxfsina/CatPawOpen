@@ -346,10 +346,7 @@ async function category(inReq, _outResp) {
                 pic = 'https:' + pic;
             }
             // 其他情况保持不变（包括https开头和相对路径）
-            
-            // 提取描述 - 从.figure_desc的title属性获取
-            const desc = $el.find('.figure_desc').attr('title') || $el.find('.figure_desc').text() || '';
-            
+    
             // 提取视频ID - 从data-float属性获取
             const videoId = $el.find('a.figure').attr('data-float') || '';
             
