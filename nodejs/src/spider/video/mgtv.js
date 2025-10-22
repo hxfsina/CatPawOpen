@@ -264,13 +264,23 @@ async function detail(inReq, _outResp) {
                 episodes.forEach((episode, index) => {
                     if (episode.isIntact === "1") {
                         const playUrl = `https://www.mgtv.com${episode.url}`;
-                        const title = `第${index + 1}集`;
+                        
+                        // 根据剧集数量决定标题
+                        let title;
+                        if (episodes.length > 1) {
+                            // 多集情况：使用t1字段或默认集数
+                            title = episode.t1 || `第${index + 1}集`;
+                        } else {
+                            // 单集情况：使用"正片"
+                            title = '正片';
+                        }
+                        
                         playList.push(`${title}$${playUrl}`);
                     }
                 });
                 
                 vod.vod_play_url = playList.join('#');
-                videos.push(vod);
+                videos.push(vod);    
             }
         }
         
