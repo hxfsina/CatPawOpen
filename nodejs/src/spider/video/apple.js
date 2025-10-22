@@ -25,49 +25,66 @@ async function home(_inReq, _outResp) {
     const data = await request(`${host}/api.php/v2.vod/androidtypes`);
     
     let classes = [];
-    let filters = [];
+    let filters = {};
     
     for (const item of data.data) {
+        const typeId = item.type_id.toString();
         classes.push({
-            type_id: item.type_id.toString(),
+            type_id: typeId,
             type_name: item.type_name
         });
         
-        // 构建过滤对象
-        let filterObj = {
-            key: item.type_id.toString(),
-            name: item.type_name,
-            value: []
-        };
+        // 为每个分类构建过滤器
+        const filterList = [];
         
         // 添加分类筛选
         if (item.classes && item.classes.length > 0 && item.classes[0] !== '') {
-            filterObj.value.push({
-                n: '类型',
-                v: 'class',
-                options: item.classes.map(cls => ({ n: cls, v: cls }))
+            const classOptions = [{ n: "全部", v: "all" }];
+            classOptions.push(...item.classes.map(cls => ({ n: cls, v: cls })));
+            
+            filterList.push({
+                key: "class",
+                name: "类型",
+                value: classOptions
             });
         }
         
         // 添加地区筛选
         if (item.areas && item.areas.length > 0 && item.areas[0] !== '') {
-            filterObj.value.push({
-                n: '地区',
-                v: 'area',
-                options: item.areas.map(area => ({ n: area, v: area }))
+            const areaOptions = [{ n: "全部", v: "all" }];
+            areaOptions.push(...item.areas.map(area => ({ n: area, v: area })));
+            
+            filterList.push({
+                key: "area",
+                name: "地区",
+                value: areaOptions
             });
         }
         
         // 添加年份筛选
         if (item.years && item.years.length > 0 && item.years[0] !== '') {
-            filterObj.value.push({
-                n: '年份',
-                v: 'year',
-                options: item.years.map(year => ({ n: year, v: year }))
+            const yearOptions = [{ n: "全部", v: "all" }];
+            yearOptions.push(...item.years.map(year => ({ n: year, v: year })));
+            
+            filterList.push({
+                key: "year",
+                name: "年份",
+                value: yearOptions
             });
         }
         
-        filters.push(filterObj);
+        // 添加排序筛选（通用）
+        filterList.push({
+            key: "sortby",
+            name: "排序",
+            value: [
+                { n: "最新", v: "time" },
+                { n: "最热", v: "hits" },
+                { n: "评分", v: "score" }
+            ]
+        });
+        
+        filters[typeId] = filterList;
     }
 
     // 获取首页视频内容
