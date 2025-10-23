@@ -560,7 +560,7 @@ async function search(inReq, _outResp) {
     const pg = inReq.body.page || 1;
     
     try {
-        // 使用原始规则中的搜索逻辑
+        // 按照原始规则中的搜索逻辑
         const html = await vod1(wd);
         const json = JSON.parse(html);
         
@@ -568,9 +568,9 @@ async function search(inReq, _outResp) {
         
         console.log('搜索返回数据:', JSON.stringify(json, null, 2)); // 调试日志
         
-        // 解析搜索结果 - 按照原始规则逻辑
+        // 解析搜索结果 - 完全按照原始规则逻辑
         if (json.data) {
-            // 1. 处理normalList
+            // 1. 处理normalList - 原始规则中的逻辑
             if (json.data.normalList && json.data.normalList.itemList) {
                 json.data.normalList.itemList.forEach(item => {
                     try {
@@ -579,7 +579,7 @@ async function search(inReq, _outResp) {
                                 vod_id: item.doc.id,
                                 vod_name: item.videoInfo?.title || '未知标题',
                                 vod_pic: item.videoInfo?.imgUrl || '',
-                                vod_remarks: item.videoInfo?.desc || ''
+                                vod_remarks: ''
                             });
                         }
                     } catch (e) {
@@ -588,7 +588,7 @@ async function search(inReq, _outResp) {
                 });
             }
             
-            // 2. 处理areaBoxList - 按照原始规则逻辑
+            // 2. 处理areaBoxList - 原始规则中的逻辑
             if (json.data.areaBoxList && json.data.areaBoxList.length > 0) {
                 json.data.areaBoxList[0].itemList.forEach(item => {
                     try {
@@ -598,7 +598,7 @@ async function search(inReq, _outResp) {
                                 vod_id: item.doc.id,
                                 vod_name: item.videoInfo.title,
                                 vod_pic: item.videoInfo.imgUrl || '',
-                                vod_remarks: item.videoInfo.desc || ''
+                                vod_remarks: ''
                             });
                         }
                     } catch (e) {
@@ -629,7 +629,7 @@ async function search(inReq, _outResp) {
     }
 }
 
-// 保持vod1函数与原始规则一致
+// 保持vod1函数与原始规则完全一致
 async function vod1(ids) {
     let html1 = await request('https://pbaccess.video.qq.com/trpc.videosearch.mobile_search.MultiTerminalSearch/MbSearch?vplatform=2', {
         method: 'POST',
