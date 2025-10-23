@@ -562,8 +562,11 @@ async function search(inReq, _outResp) {
     try {
         // 腾讯视频搜索API
         const API_URL = "https://pbaccess.video.qq.com/trpc.videosearch.mobile_search.MultiTerminalSearch/MbSearch?vplatform=2";
-        const PAGE_SIZE = 30; // 腾讯每页结果数量
+        const PAGE_SIZE = 30;
         
+        // 只排除指定的类型
+        const excludedTypes = ["短视频", "生活", "新闻", "游戏"];
+
         // 构建请求参数
         const params = {
             "version": "25042201",
@@ -572,7 +575,7 @@ async function search(inReq, _outResp) {
             "uuid": "B1E50847-D25F-4C4B-BBA0-36F0093487F6",
             "retry": 0,
             "query": wd,
-            "pagenum": pg - 1, // API页码从0开始
+            "pagenum": 0, // 只查询第1页
             "isPrefetch": true,
             "pagesize": PAGE_SIZE,
             "queryFrom": 0,
@@ -608,42 +611,49 @@ async function search(inReq, _outResp) {
         // 处理普通搜索结果
         if (json.data?.normalList?.itemList) {
             json.data.normalList.itemList.forEach(item => {
-                if (item.doc?.id?.length > 11) {
-                    videos.push({
-                        vod_id: item.doc.id,
-                        vod_name: item.videoInfo?.title || "未知标题",
-                        vod_pic: item.videoInfo?.imgUrl || "",
-                        vod_remarks: item.videoInfo?.subTitle || ""
-                    });
+                if (item.doc?.dataType === 5000) return;
+                
+                if (item.doc?.id && item.videoInfo) {
+                    const videoData = parseVideoInfo(item, wd);
+                    if (videoData && !isExcludedVideoType(videoData.vod_type, excludedTypes)) {
+                        videos.push(videoData);
+                    }
                 }
             });
         }
 
         // 处理区域搜索结果
-        if (json.data?.areaBoxList?.length > 0) {
+        if (json.data?.areaBoxList) {
             json.data.areaBoxList.forEach(area => {
                 if (area.itemList) {
                     area.itemList.forEach(item => {
-                        if (item.doc?.id?.length > 11 && item.videoInfo?.title?.includes(wd)) {
-                            videos.push({
-                                vod_id: item.doc.id,
-                                vod_name: item.videoInfo.title,
-                                vod_pic: item.videoInfo.imgUrl,
-                                vod_remarks: item.videoInfo.subTitle || ""
-                            });
+                        if (item.doc?.dataType === 5000) return;
+                        
+                        if (item.doc?.id && item.videoInfo) {
+                            const videoData = parseVideoInfo(item, wd);
+                            if (videoData && !isExcludedVideoType(videoData.vod_type, excludedTypes)) {
+                                videos.push(videoData);
+                            }
                         }
                     });
                 }
             });
         }
 
+        // 按信息完整度排序
+        const sortedVideos = videos.sort((a, b) => {
+            const scoreA = calculateInfoScore(a);
+            const scoreB = calculateInfoScore(b);
+            return scoreB - scoreA; // 降序排列，信息完整的在前
+        });
+
         // 猫影视格式返回
         return {
             page: parseInt(pg),
-            pagecount: Math.ceil(videos.length / 20), // 猫影视每页20条
+            pagecount: Math.ceil(sortedVideos.length / 20), // 猫影视每页20条
             limit: 20,
-            total: videos.length,
-            list: videos
+            total: sortedVideos.length,
+            list: sortedVideos.slice(0, 20) // 只返回前20条
         };
     } catch (error) {
         console.error('搜索失败:', error);
@@ -654,6 +664,102 @@ async function search(inReq, _outResp) {
             total: 0,
             list: []
         };
+    }
+}
+
+// 计算信息完整度得分
+function calculateInfoScore(video) {
+    let score = 0;
+    
+    // 年份信息 (10分)
+    if (video.vod_year && video.vod_year !== "") score += 10;
+    
+    // 演员信息 (20分)
+    if (video.vod_actor && video.vod_actor !== "") score += 20;
+    
+    // 导演信息 (15分)
+    if (video.vod_director && video.vod_director !== "") score += 15;
+    
+    // 简介信息 (25分)
+    if (video.vod_content && video.vod_content !== "") score += 25;
+    
+    // 封面图片 (10分)
+    if (video.vod_pic && video.vod_pic !== "") score += 10;
+    
+    // 备注信息 (10分)
+    if (video.vod_remarks && video.vod_remarks !== "") score += 10;
+    
+    // 类型信息 (10分)
+    if (video.vod_type && video.vod_type !== "未知") score += 10;
+    
+    return score;
+}
+
+// 类型排除函数 - 只检查是否在排除列表中
+function isExcludedVideoType(vodType, excludedTypes) {
+    if (!vodType || vodType === "未知") return false;
+    
+    // 检查是否在排除列表中
+    return excludedTypes.some(excluded => 
+        vodType.includes(excluded) || excluded.includes(vodType)
+    );
+}
+
+// 解析视频信息函数 - 保持标题精确匹配
+function parseVideoInfo(item, exactMatchKeyword) {
+    try {
+        const videoInfo = item.videoInfo;
+        const doc = item.doc;
+        
+        // 清理标题
+        const cleanTitle = (videoInfo.title || doc.title || "未知标题")
+            .replace(/<em>/g, "")
+            .replace(/<\/em>/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
+        
+        // 标题精确匹配验证
+        if (cleanTitle !== exactMatchKeyword) {
+            return null;
+        }
+        
+        // 提取播放量或追剧数
+        let remarks = "";
+        if (videoInfo.coverDoc?.chaseNum) {
+            remarks = `追剧${videoInfo.coverDoc.chaseNum}`;
+        } else if (videoInfo.views) {
+            remarks = videoInfo.views;
+        }
+        
+        // 确定视频类型
+        let vodType = "未知";
+        if (videoInfo.typeName) {
+            vodType = videoInfo.typeName;
+        } else if (videoInfo.videoType === 7) {
+            vodType = "短视频";
+        } else if (videoInfo.videoType === 2) {
+            vodType = "电视剧";
+        } else if (videoInfo.videoType === 3) {
+            vodType = "电影";
+        } else if (videoInfo.videoType === 4) {
+            vodType = "综艺";
+        } else if (videoInfo.videoType === 5) {
+            vodType = "动漫";
+        }
+        
+        return {
+            vod_id: doc.id,
+            vod_name: cleanTitle,
+            vod_pic: videoInfo.imgUrl || doc.pic || "",
+            vod_remarks: remarks,
+            vod_type: vodType,
+            vod_year: videoInfo.year || "",
+            vod_actor: videoInfo.actors?.join(", ") || "",
+            vod_director: videoInfo.directors?.join(", ") || "",
+            vod_content: videoInfo.descrip || ""
+        };
+    } catch (error) {
+        return null;
     }
 }
 
