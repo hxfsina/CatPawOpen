@@ -560,8 +560,8 @@ async function search(inReq, _outResp) {
     const pg = inReq.body.page || 1;
     
     try {
-        const html = await vod1(wd);
-        const json = JSON.parse(html);
+        // 直接获取 JSON 数据，不需要解析 HTML
+        const json = await vod1(wd);
         
         const videos = [];
         
@@ -662,8 +662,14 @@ async function search(inReq, _outResp) {
 
 // 保持vod1函数与原始规则完全一致
 async function vod1(ids) {
-    let html1 = await request('https://pbaccess.video.qq.com/trpc.videosearch.mobile_search.MultiTerminalSearch/MbSearch?vplatform=2', {
+    let response = await request('https://pbaccess.video.qq.com/trpc.videosearch.mobile_search.MultiTerminalSearch/MbSearch?vplatform=2', {
         method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.139 Safari/537.36',
+            'Origin': 'https://v.qq.com',
+            'Referer': 'https://v.qq.com/'
+        },
         body: JSON.stringify({
             "version": "25042201",
             "clientType": 1,
@@ -689,7 +695,9 @@ async function vod1(ids) {
             }
         })
     });
-    return html1;
+    
+    // 直接返回 JSON 对象，不需要解析
+    return response;
 }
 
 async function test(inReq, outResp) {
