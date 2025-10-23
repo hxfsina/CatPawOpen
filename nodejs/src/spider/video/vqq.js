@@ -560,55 +560,86 @@ async function search(inReq, _outResp) {
     const pg = inReq.body.page || 1;
     
     try {
-        // 按照原始规则中的搜索逻辑
         const html = await vod1(wd);
         const json = JSON.parse(html);
         
         const videos = [];
         
-        console.log('搜索返回数据:', JSON.stringify(json, null, 2)); // 调试日志
+        console.log('搜索返回数据:', JSON.stringify(json, null, 2));
         
-        // 解析搜索结果 - 完全按照原始规则逻辑
-        if (json.data) {
-            // 1. 处理normalList - 原始规则中的逻辑
-            if (json.data.normalList && json.data.normalList.itemList) {
-                json.data.normalList.itemList.forEach(item => {
-                    try {
-                        if (item.doc && item.doc.id && item.doc.id.length > 11) {
+        // 修复：直接使用 itemList，没有 data.normalList 层级
+        if (json.itemList && Array.isArray(json.itemList)) {
+            json.itemList.forEach(item => {
+                try {
+                    // 只处理 dataType 2 的数据（完整的影视作品）
+                    if (item.doc && 
+                        item.doc.dataType === 2 && // 完整作品类型
+                        item.doc.id && 
+                        item.videoInfo && 
+                        item.videoInfo.title) {
+                        
+                        // 获取清洗后的标题
+                        const cleanTitle = item.videoInfo.title.replace(/《|》/g, '');
+                        
+                        // 精确匹配逻辑：检查标题是否包含搜索关键词
+                        // 同时排除明显不相关的结果（如同题材推荐）
+                        const isExactMatch = cleanTitle.includes(wd) || wd.includes(cleanTitle);
+                        
+                        // 排除包含"同题材"等推荐标签的结果
+                        const isRecommendation = item.videoInfo.subTitle && 
+                            (item.videoInfo.subTitle.includes('同题材') || 
+                             item.videoInfo.subTitle.includes('同类型') ||
+                             item.videoInfo.subTitle.includes('推荐'));
+                        
+                        // 只有精确匹配且不是推荐结果才加入
+                        if (isExactMatch && !isRecommendation) {
                             videos.push({
                                 vod_id: item.doc.id,
-                                vod_name: item.videoInfo?.title || '未知标题',
-                                vod_pic: item.videoInfo?.imgUrl || '',
-                                vod_remarks: ''
-                            });
-                        }
-                    } catch (e) {
-                        console.log('normalList item处理失败:', e);
-                    }
-                });
-            }
-            
-            // 2. 处理areaBoxList - 原始规则中的逻辑
-            if (json.data.areaBoxList && json.data.areaBoxList.length > 0) {
-                json.data.areaBoxList[0].itemList.forEach(item => {
-                    try {
-                        if (item.doc && item.doc.id && item.doc.id.length > 11 && 
-                            item.videoInfo && item.videoInfo.title.includes(wd)) {
-                            videos.push({
-                                vod_id: item.doc.id,
-                                vod_name: item.videoInfo.title,
+                                vod_name: cleanTitle,
                                 vod_pic: item.videoInfo.imgUrl || '',
-                                vod_remarks: ''
+                                vod_remarks: item.videoInfo.coverDoc?.chaseNum ? `追剧${item.videoInfo.coverDoc.chaseNum}` : '更新中'
                             });
                         }
-                    } catch (e) {
-                        console.log('areaBoxList item处理失败:', e);
                     }
-                });
-            }
+                } catch (e) {
+                    console.log('item处理失败:', e);
+                }
+            });
         }
         
-        console.log(`搜索"${wd}"找到${videos.length}个结果`);
+        // 如果精确匹配没有结果，放宽条件（但仍然排除推荐结果）
+        if (videos.length === 0 && json.itemList && Array.isArray(json.itemList)) {
+            json.itemList.forEach(item => {
+                try {
+                    if (item.doc && 
+                        item.doc.dataType === 2 && 
+                        item.doc.id && 
+                        item.videoInfo && 
+                        item.videoInfo.title) {
+                        
+                        const cleanTitle = item.videoInfo.title.replace(/《|》/g, '');
+                        const isRecommendation = item.videoInfo.subTitle && 
+                            (item.videoInfo.subTitle.includes('同题材') || 
+                             item.videoInfo.subTitle.includes('同类型') ||
+                             item.videoInfo.subTitle.includes('推荐'));
+                        
+                        // 放宽条件：只要不是推荐结果就加入
+                        if (!isRecommendation) {
+                            videos.push({
+                                vod_id: item.doc.id,
+                                vod_name: cleanTitle,
+                                vod_pic: item.videoInfo.imgUrl || '',
+                                vod_remarks: item.videoInfo.coverDoc?.chaseNum ? `追剧${item.videoInfo.coverDoc.chaseNum}` : '更新中'
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.log('放宽条件item处理失败:', e);
+                }
+            });
+        }
+        
+        console.log(`搜索"${wd}"找到${videos.length}个有效结果`);
         
         return {
             page: parseInt(pg),
