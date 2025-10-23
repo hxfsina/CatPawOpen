@@ -555,13 +555,45 @@ async function play(inReq, _outResp) {
     }
 }
 
-// 生成随机UUID
-function generateUUID() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0;
-        const v = c == 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
+async function search(inReq, _outResp) {
+    const wd = inReq.body.wd;
+    const pg = inReq.body.page || 1;
+    
+    try {
+        // 从代理服务器获取数据
+        const proxyUrl = `http://nas.hxfkof.top:3050/api/search?wd=${encodeURIComponent(wd)}&page=${pg}`;
+        
+        console.log('从代理服务器获取数据:', proxyUrl);
+        
+        const response = await request(proxyUrl);
+        
+        // 检查响应结构
+        if (response && response.code === 200 && response.data && response.data.list) {
+            console.log(`从代理服务器获取到 ${response.data.list.length} 个视频`);
+            
+            // 直接返回代理服务器的数据格式
+            return {
+                page: response.data.page || parseInt(pg),
+                pagecount: response.data.pagecount || 1,
+                limit: response.data.limit || 30,
+                total: response.data.total || response.data.list.length,
+                list: response.data.list
+            };
+        } else {
+            console.log('代理服务器返回数据格式异常:', response);
+            throw new Error('代理服务器返回数据格式异常');
+        }
+        
+    } catch (error) {
+        console.error('从代理服务器搜索失败:', error);
+        return {
+            page: parseInt(pg),
+            pagecount: 1,
+            limit: 30,
+            total: 0,
+            list: []
+        };
+    }
 }
 
 
