@@ -563,9 +563,9 @@ async function search(inReq, _outResp) {
         // 腾讯视频搜索API
         const API_URL = "https://pbaccess.video.qq.com/trpc.videosearch.mobile_search.MultiTerminalSearch/MbSearch?vplatform=2";
         const PAGE_SIZE = 30;
-
+        
         // 构建请求参数
-        const params = {
+        const requestParams = {
             "version": "25042201",
             "clientType": 1,
             "filterValue": "",
@@ -590,34 +590,44 @@ async function search(inReq, _outResp) {
             }
         };
 
-        // 发送请求
-        const response = await request(API_URL, {
+        console.log('发送请求，关键词:', wd);
+
+        // 使用 fetch 代替 request
+        const response = await fetch(API_URL, {
             method: "POST",
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.139 Safari/537.36',
                 'Content-Type': 'application/json',
-                'origin': 'https://v.qq.com',
-                'referer': 'https://v.qq.com/'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.139 Safari/537.36',
+                'Origin': 'https://v.qq.com',
+                'Referer': 'https://v.qq.com/'
             },
-            body: JSON.stringify(params)
+            body: JSON.stringify(requestParams)
         });
 
-        const json = JSON.parse(response);
+        // 检查响应状态
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        console.log('API响应接收成功');
+
         let videos = [];
 
         // 检查是否有数据返回
-        const hasData = json.data && (
-            (json.data.normalList && json.data.normalList.itemList && json.data.normalList.itemList.length > 0) ||
-            (json.data.areaBoxList && json.data.areaBoxList.length > 0)
+        const hasData = responseData.data && (
+            (responseData.data.normalList && responseData.data.normalList.itemList && responseData.data.normalList.itemList.length > 0) ||
+            (responseData.data.areaBoxList && responseData.data.areaBoxList.length > 0)
         );
 
         if (hasData) {
+            console.log('有数据返回，开始解析视频信息');
             // 有返回数据，提取前3个视频
             let count = 0;
             
             // 处理普通搜索结果
-            if (json.data.normalList && json.data.normalList.itemList) {
-                for (const item of json.data.normalList.itemList) {
+            if (responseData.data.normalList && responseData.data.normalList.itemList) {
+                for (const item of responseData.data.normalList.itemList) {
                     if (count >= 3) break;
                     if (item.doc && item.videoInfo) {
                         const videoData = parseVideoInfo(item);
@@ -630,8 +640,8 @@ async function search(inReq, _outResp) {
             }
 
             // 如果还不够3个，处理区域搜索结果
-            if (count < 3 && json.data.areaBoxList) {
-                for (const area of json.data.areaBoxList) {
+            if (count < 3 && responseData.data.areaBoxList) {
+                for (const area of responseData.data.areaBoxList) {
                     if (count >= 3) break;
                     if (area.itemList) {
                         for (const item of area.itemList) {
@@ -649,9 +659,10 @@ async function search(inReq, _outResp) {
             }
         } else {
             // 无返回数据，返回固定模拟值
+            console.log('无数据返回，使用模拟数据');
             videos = [{
                 vod_id: "mzc00200tjkzeps",
-                vod_name: "哪吒之魔童闹海",
+                vod_name: wd || "哪吒之魔童闹海",
                 vod_pic: "https://vcover-vt-pic.puui.qpic.cn/vcover_vt_pic/0/mzc00200tjkzeps1753775601579/260",
                 vod_remarks: "追剧1342.8万",
                 vod_year: "2025",
@@ -680,7 +691,7 @@ async function search(inReq, _outResp) {
             total: 1,
             list: [{
                 vod_id: "mzc00200tjkzeps",
-                vod_name: "哪吒之魔童闹海",
+                vod_name: wd || "哪吒之魔童闹海",
                 vod_pic: "https://vcover-vt-pic.puui.qpic.cn/vcover_vt_pic/0/mzc00200tjkzeps1753775601579/260",
                 vod_remarks: "追剧1342.8万",
                 vod_year: "2025",
@@ -742,6 +753,7 @@ function parseVideoInfo(item) {
             vod_content: videoInfo.descrip || ""
         };
     } catch (error) {
+        console.error('解析视频信息出错:', error);
         return null;
     }
 }
