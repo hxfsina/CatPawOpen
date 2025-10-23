@@ -559,173 +559,55 @@ async function search(inReq, _outResp) {
     const wd = inReq.body.wd;
     const pg = inReq.body.page || 1;
     
-    try {
-        // 腾讯视频搜索API
-        const API_URL = "https://pbaccess.video.qq.com/trpc.videosearch.mobile_search.MultiTerminalSearch/MbSearch?vplatform=2";
-        const PAGE_SIZE = 30;
-        
-        // 只排除指定的类型
-        const excludedTypes = ["短视频", "生活", "新闻", "游戏"];
-
-        // 构建请求参数
-        const params = {
-            "version": "25042201",
-            "clientType": 1,
-            "filterValue": "",
-            "uuid": "B1E50847-D25F-4C4B-BBA0-36F0093487F6",
-            "retry": 0,
-            "query": wd,
-            "pagenum": 0, // 只查询第1页
-            "isPrefetch": true,
-            "pagesize": PAGE_SIZE,
-            "queryFrom": 0,
-            "searchDatakey": "",
-            "transInfo": "",
-            "isneedQc": true,
-            "preQid": "",
-            "adClientInfo": "",
-            "extraInfo": {
-                "isNewMarkLabel": "1",
-                "multi_terminal_pc": "1",
-                "themeType": "1",
-                "sugRelatedIds": "{}",
-                "appVersion": ""
-            }
-        };
-
-        // 发送请求
-        const response = await request(API_URL, {
-            method: "POST",
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.139 Safari/537.36',
-                'Content-Type': 'application/json',
-                'origin': 'https://v.qq.com',
-                'referer': 'https://v.qq.com/'
-            },
-            body: JSON.stringify(params)
-        });
-
-        const json = JSON.parse(response);
-        const videos = [];
-
-        // 处理普通搜索结果
-        if (json.data?.normalList?.itemList) {
-            json.data.normalList.itemList.forEach(item => {
-                if (item.doc?.dataType === 5000) return;
-                
-                if (item.doc?.id && item.videoInfo) {
-                    const videoData = parseVideoInfo(item, wd);
-                    if (videoData && !isExcludedVideoType(videoData.vod_type, excludedTypes)) {
-                        videos.push(videoData);
-                    }
-                }
-            });
-        }
-
-        // 处理区域搜索结果
-        if (json.data?.areaBoxList) {
-            json.data.areaBoxList.forEach(area => {
-                if (area.itemList) {
-                    area.itemList.forEach(item => {
-                        if (item.doc?.dataType === 5000) return;
-                        
-                        if (item.doc?.id && item.videoInfo) {
-                            const videoData = parseVideoInfo(item, wd);
-                            if (videoData && !isExcludedVideoType(videoData.vod_type, excludedTypes)) {
-                                videos.push(videoData);
-                            }
-                        }
-                    });
-                }
-            });
-        }
-
-        // 猫影视格式返回
-        return {
-            page: parseInt(pg),
-            pagecount: Math.ceil(videos.length / 20), // 猫影视每页20条
-            limit: 20,
-            total: videos.length,
-            list: videos.slice(0, 20) // 只返回前20条
-        };
-    } catch (error) {
-        console.error('搜索失败:', error);
-        return {
-            page: parseInt(pg),
-            pagecount: 1,
-            limit: 20,
-            total: 0,
-            list: []
-        };
-    }
-}
-
-// 类型排除函数 - 只检查是否在排除列表中
-function isExcludedVideoType(vodType, excludedTypes) {
-    if (!vodType || vodType === "未知") return false;
+    console.log('测试模式：搜索关键词:', wd, '页码:', pg);
     
-    // 检查是否在排除列表中
-    return excludedTypes.some(excluded => 
-        vodType.includes(excluded) || excluded.includes(vodType)
-    );
-}
-
-// 解析视频信息函数 - 保持标题精确匹配
-function parseVideoInfo(item, exactMatchKeyword) {
-    try {
-        const videoInfo = item.videoInfo;
-        const doc = item.doc;
-        
-        // 清理标题
-        const cleanTitle = (videoInfo.title || doc.title || "未知标题")
-            .replace(/<em>/g, "")
-            .replace(/<\/em>/g, "")
-            .replace(/\s+/g, " ")
-            .trim();
-        
-        // 标题精确匹配验证
-        if (cleanTitle !== exactMatchKeyword) {
-            return null;
+    // 固定返回的测试数据
+    const testVideos = [
+        {
+            vod_id: "mzc00200tjkzeps",
+            vod_name: "哪吒之魔童闹海",
+            vod_pic: "https://vcover-vt-pic.puui.qpic.cn/vcover_vt_pic/0/mzc00200tjkzeps1753775601579/260",
+            vod_remarks: "追剧1342.8万",
+            vod_year: "2025",
+            vod_actor: "",
+            vod_director: "饺子",
+            vod_content: "天劫之后，哪吒、敖丙的灵魂虽保住了，但肉身很快会魂飞魄散。太乙真人打算用七色宝莲给二人重塑肉身。但是在重塑肉身的过程中却遇到重重困难，哪吒、敖丙的命运将走向何方？",
+            vod_type: "电影"
+        },
+        {
+            vod_id: "zr5a67l333ehzu9",
+            vod_name: "哪吒之魔童降世",
+            vod_pic: "http://puui.qpic.cn/vcover_vt_pic/0/zr5a67l333ehzu91574817414/260",
+            vod_remarks: "追剧201.8万",
+            vod_year: "2019",
+            vod_actor: "",
+            vod_director: "饺子",
+            vod_content: "天地灵气孕育出一颗能量巨大的混元珠，元始天尊将混元珠提炼成灵珠和魔丸，灵珠投胎为人，助周伐纣时可堪大用；而魔丸则会诞出魔王，为祸人间。元始天尊启动了天劫咒语，3年后天雷将会降临，摧毁魔丸。太乙受命将灵珠托生于陈塘关李靖家的儿子哪吒身上。然而阴差阳错，灵珠和魔丸竟然被掉包。本应是灵珠英雄的哪吒却成了混世大魔王。调皮捣蛋顽劣不堪的哪吒却徒有一颗做英雄的心。然而面对众人对魔丸的误解和即将来临的天雷的降临，哪吒是否命中注定会立地成魔？他将何去何从？",
+            vod_type: "电影"
+        },
+        {
+            vod_id: "mzc00200jcyvd8q",
+            vod_name: "聊斋：兰若寺",
+            vod_pic: "https://vcover-vt-pic.puui.qpic.cn/vcover_vt_pic/0/mzc00200jcyvd8q1760501384904/260",
+            vod_remarks: "追剧95.0万",
+            vod_year: "2025",
+            vod_actor: "",
+            vod_director: "崔月梅,刘源,谢君伟,邹靖,黄鹤宇,刘一林",
+            vod_content: "改编自中国最杰出的文言短篇小说集《聊斋志异》。书生蒲松龄夜宿兰若寺，被蛤蟆、乌龟两只精怪抓到古井底评判故事好坏，于一寺一井一树间，《崂山道士》《莲花公主》《聂小倩》《画皮》《鲁公女》等《聊斋志异》经典篇章，跨越沧海桑田次第展开，六种故事风格呈现出一场至奇志怪、至情至缘的视听盛宴。",
+            vod_type: "电影"
         }
-        
-        // 提取播放量或追剧数
-        let remarks = "";
-        if (videoInfo.coverDoc?.chaseNum) {
-            remarks = `追剧${videoInfo.coverDoc.chaseNum}`;
-        } else if (videoInfo.views) {
-            remarks = videoInfo.views;
-        }
-        
-        // 确定视频类型
-        let vodType = "未知";
-        if (videoInfo.typeName) {
-            vodType = videoInfo.typeName;
-        } else if (videoInfo.videoType === 7) {
-            vodType = "短视频";
-        } else if (videoInfo.videoType === 2) {
-            vodType = "电视剧";
-        } else if (videoInfo.videoType === 3) {
-            vodType = "电影";
-        } else if (videoInfo.videoType === 4) {
-            vodType = "综艺";
-        } else if (videoInfo.videoType === 5) {
-            vodType = "动漫";
-        }
-        
-        return {
-            vod_id: doc.id,
-            vod_name: cleanTitle,
-            vod_pic: videoInfo.imgUrl || doc.pic || "",
-            vod_remarks: remarks,
-            vod_type: vodType,
-            vod_year: videoInfo.year || "",
-            vod_actor: videoInfo.actors?.join(", ") || "",
-            vod_director: videoInfo.directors?.join(", ") || "",
-            vod_content: videoInfo.descrip || ""
-        };
-    } catch (error) {
-        return null;
-    }
+    ];
+    
+    console.log('测试模式：返回固定数据，数量:', testVideos.length);
+    
+    // 猫影视格式返回
+    return {
+        page: parseInt(pg),
+        pagecount: 1,
+        limit: 20,
+        total: testVideos.length,
+        list: testVideos
+    };
 }
 
 async function test(inReq, outResp) {
