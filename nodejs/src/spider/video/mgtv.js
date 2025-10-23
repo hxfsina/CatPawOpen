@@ -381,55 +381,60 @@ async function search(inReq, _outResp) {
     const wd = inReq.body.wd;
     const pg = inReq.body.page || 1;
     
-    console.log('测试模式：搜索关键词:', wd, '页码:', pg);
-    
-    // 固定返回的测试数据
-    const testVideos = [
-        {
-            vod_id: "mzc00200tjkzeps",
-            vod_name: "哪吒之魔童闹海",
-            vod_pic: "https://vcover-vt-pic.puui.qpic.cn/vcover_vt_pic/0/mzc00200tjkzeps1753775601579/260",
-            vod_remarks: "追剧1342.8万",
-            vod_year: "2025",
-            vod_actor: "",
-            vod_director: "饺子",
-            vod_content: "天劫之后，哪吒、敖丙的灵魂虽保住了，但肉身很快会魂飞魄散。太乙真人打算用七色宝莲给二人重塑肉身。但是在重塑肉身的过程中却遇到重重困难，哪吒、敖丙的命运将走向何方？",
-            vod_type: "电影"
-        },
-        {
-            vod_id: "zr5a67l333ehzu9",
-            vod_name: "哪吒之魔童降世",
-            vod_pic: "http://puui.qpic.cn/vcover_vt_pic/0/zr5a67l333ehzu91574817414/260",
-            vod_remarks: "追剧201.8万",
-            vod_year: "2019",
-            vod_actor: "",
-            vod_director: "饺子",
-            vod_content: "天地灵气孕育出一颗能量巨大的混元珠，元始天尊将混元珠提炼成灵珠和魔丸，灵珠投胎为人，助周伐纣时可堪大用；而魔丸则会诞出魔王，为祸人间。元始天尊启动了天劫咒语，3年后天雷将会降临，摧毁魔丸。太乙受命将灵珠托生于陈塘关李靖家的儿子哪吒身上。然而阴差阳错，灵珠和魔丸竟然被掉包。本应是灵珠英雄的哪吒却成了混世大魔王。调皮捣蛋顽劣不堪的哪吒却徒有一颗做英雄的心。然而面对众人对魔丸的误解和即将来临的天雷的降临，哪吒是否命中注定会立地成魔？他将何去何从？",
-            vod_type: "电影"
-        },
-        {
-            vod_id: "mzc00200jcyvd8q",
-            vod_name: "聊斋：兰若寺",
-            vod_pic: "https://vcover-vt-pic.puui.qpic.cn/vcover_vt_pic/0/mzc00200jcyvd8q1760501384904/260",
-            vod_remarks: "追剧95.0万",
-            vod_year: "2025",
-            vod_actor: "",
-            vod_director: "崔月梅,刘源,谢君伟,邹靖,黄鹤宇,刘一林",
-            vod_content: "改编自中国最杰出的文言短篇小说集《聊斋志异》。书生蒲松龄夜宿兰若寺，被蛤蟆、乌龟两只精怪抓到古井底评判故事好坏，于一寺一井一树间，《崂山道士》《莲花公主》《聂小倩》《画皮》《鲁公女》等《聊斋志异》经典篇章，跨越沧海桑田次第展开，六种故事风格呈现出一场至奇志怪、至情至缘的视听盛宴。",
-            vod_type: "电影"
+    try {
+        // 构建搜索URL
+        const searchUrl = config.searchUrl
+            .replace('**', encodeURIComponent(wd))
+            .replace('fypage', pg);
+        
+        const data = await request(searchUrl);
+        
+        const videos = [];
+        
+        if (data && data.data && data.data.contents) {
+            data.data.contents.forEach(item => {
+                if (item.type && item.type === 'media' && item.data && item.data.length > 0) {
+                    const mediaItem = item.data[0];
+                    if (mediaItem.source === "imgo") {
+                        const desc = mediaItem.desc ? mediaItem.desc.join(',') : '';
+                        let fyclass = '';
+                        
+                        try {
+                            fyclass = mediaItem.rpt ? mediaItem.rpt.match(/idx=(.*?)&/)[1] + '$' : '';
+                        } catch (e) {
+                            console.log('解析分类失败:', e.message);
+                        }
+                        
+                        const videoId = fyclass + mediaItem.url.match(/.*\/(.*?)\.html/)[1];
+                        
+                        videos.push({
+                            vod_id: videoId,
+                            vod_name: mediaItem.title.replace(/<B>|<\/B>/g, ''),
+                            vod_pic: mediaItem.img || '',
+                            vod_remarks: desc
+                        });
+                    }
+                }
+            });
         }
-    ];
-    
-    console.log('测试模式：返回固定数据，数量:', testVideos.length);
-    
-    // 猫影视格式返回
-    return {
-        page: parseInt(pg),
-        pagecount: 1,
-        limit: 20,
-        total: testVideos.length,
-        list: testVideos
-    };
+        
+        return {
+            page: parseInt(pg),
+            pagecount: 10,
+            limit: 20,
+            total: 100,
+            list: videos
+        };
+    } catch (error) {
+        console.error('搜索失败:', error);
+        return {
+            page: parseInt(pg),
+            pagecount: 1,
+            limit: 20,
+            total: 0,
+            list: []
+        };
+    }
 }
 
 async function test(inReq, outResp) {
