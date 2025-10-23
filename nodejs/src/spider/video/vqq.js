@@ -640,20 +640,13 @@ async function search(inReq, _outResp) {
             });
         }
 
-        // 按信息完整度排序
-        const sortedVideos = videos.sort((a, b) => {
-            const scoreA = calculateInfoScore(a);
-            const scoreB = calculateInfoScore(b);
-            return scoreB - scoreA; // 降序排列，信息完整的在前
-        });
-
         // 猫影视格式返回
         return {
             page: parseInt(pg),
-            pagecount: Math.ceil(sortedVideos.length / 20), // 猫影视每页20条
+            pagecount: Math.ceil(videos.length / 20), // 猫影视每页20条
             limit: 20,
-            total: sortedVideos.length,
-            list: sortedVideos.slice(0, 20) // 只返回前20条
+            total: videos.length,
+            list: videos.slice(0, 20) // 只返回前20条
         };
     } catch (error) {
         console.error('搜索失败:', error);
@@ -665,34 +658,6 @@ async function search(inReq, _outResp) {
             list: []
         };
     }
-}
-
-// 计算信息完整度得分
-function calculateInfoScore(video) {
-    let score = 0;
-    
-    // 年份信息 (10分)
-    if (video.vod_year && video.vod_year !== "") score += 10;
-    
-    // 演员信息 (20分)
-    if (video.vod_actor && video.vod_actor !== "") score += 20;
-    
-    // 导演信息 (15分)
-    if (video.vod_director && video.vod_director !== "") score += 15;
-    
-    // 简介信息 (25分)
-    if (video.vod_content && video.vod_content !== "") score += 25;
-    
-    // 封面图片 (10分)
-    if (video.vod_pic && video.vod_pic !== "") score += 10;
-    
-    // 备注信息 (10分)
-    if (video.vod_remarks && video.vod_remarks !== "") score += 10;
-    
-    // 类型信息 (10分)
-    if (video.vod_type && video.vod_type !== "未知") score += 10;
-    
-    return score;
 }
 
 // 类型排除函数 - 只检查是否在排除列表中
