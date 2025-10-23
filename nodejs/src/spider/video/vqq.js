@@ -555,21 +555,29 @@ async function play(inReq, _outResp) {
     }
 }
 
+// 生成随机UUID
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
 async function search(inReq, _outResp) {
     const wd = inReq.body.wd;
     const pg = inReq.body.page || 1;
     
     try {
-        // 腾讯视频搜索API
         const API_URL = "https://pbaccess.video.qq.com/trpc.videosearch.mobile_search.MultiTerminalSearch/MbSearch?vplatform=2";
         const PAGE_SIZE = 30;
         
-        // 构建请求参数
+        // 构建请求参数 - 修复不一致问题
         const requestParams = {
             "version": "25042201",
-            "clientType": 1,
+            "clientType": 1, // 移动端
             "filterValue": "",
-            "uuid": "B1E50847-D25F-4C4B-BBA0-36F0093487F6",
+            "uuid": generateUUID(), // 随机UUID
             "retry": 0,
             "query": wd,
             "pagenum": 0,
@@ -592,12 +600,12 @@ async function search(inReq, _outResp) {
 
         console.log('发送请求，关键词:', wd);
 
-        // 使用 fetch 代替 request
+        // 使用移动端配置
         const response = await fetch(API_URL, {
             method: "POST",
             headers: {
                 'Content-Type': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.139 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1',
                 'Origin': 'https://v.qq.com',
                 'Referer': 'https://v.qq.com/'
             },
