@@ -560,126 +560,21 @@ async function search(inReq, _outResp) {
     const pg = inReq.body.page || 1;
     
     try {
-        // 直接获取 JSON 数据，不需要解析 HTML
-        const json = await vod1(wd);
+        // 腾讯视频搜索API
+        const API_URL = "https://pbaccess.video.qq.com/trpc.videosearch.mobile_search.MultiTerminalSearch/MbSearch?vplatform=2";
+        const PAGE_SIZE = 30; // 腾讯每页结果数量
         
-        const videos = [];
-        
-        console.log('搜索返回数据:', JSON.stringify(json, null, 2));
-        
-        // 修复：直接使用 itemList，没有 data.normalList 层级
-        if (json.itemList && Array.isArray(json.itemList)) {
-            json.itemList.forEach(item => {
-                try {
-                    // 只处理 dataType 2 的数据（完整的影视作品）
-                    if (item.doc && 
-                        item.doc.dataType === 2 && // 完整作品类型
-                        item.doc.id && 
-                        item.videoInfo && 
-                        item.videoInfo.title) {
-                        
-                        // 获取清洗后的标题
-                        const cleanTitle = item.videoInfo.title.replace(/《|》/g, '');
-                        
-                        // 精确匹配逻辑：检查标题是否包含搜索关键词
-                        // 同时排除明显不相关的结果（如同题材推荐）
-                        const isExactMatch = cleanTitle.includes(wd) || wd.includes(cleanTitle);
-                        
-                        // 排除包含"同题材"等推荐标签的结果
-                        const isRecommendation = item.videoInfo.subTitle && 
-                            (item.videoInfo.subTitle.includes('同题材') || 
-                             item.videoInfo.subTitle.includes('同类型') ||
-                             item.videoInfo.subTitle.includes('推荐'));
-                        
-                        // 只有精确匹配且不是推荐结果才加入
-                        if (isExactMatch && !isRecommendation) {
-                            videos.push({
-                                vod_id: item.doc.id,
-                                vod_name: cleanTitle,
-                                vod_pic: item.videoInfo.imgUrl || '',
-                                vod_remarks: item.videoInfo.coverDoc?.chaseNum ? `追剧${item.videoInfo.coverDoc.chaseNum}` : '更新中'
-                            });
-                        }
-                    }
-                } catch (e) {
-                    console.log('item处理失败:', e);
-                }
-            });
-        }
-        
-        // 如果精确匹配没有结果，放宽条件（但仍然排除推荐结果）
-        if (videos.length === 0 && json.itemList && Array.isArray(json.itemList)) {
-            json.itemList.forEach(item => {
-                try {
-                    if (item.doc && 
-                        item.doc.dataType === 2 && 
-                        item.doc.id && 
-                        item.videoInfo && 
-                        item.videoInfo.title) {
-                        
-                        const cleanTitle = item.videoInfo.title.replace(/《|》/g, '');
-                        const isRecommendation = item.videoInfo.subTitle && 
-                            (item.videoInfo.subTitle.includes('同题材') || 
-                             item.videoInfo.subTitle.includes('同类型') ||
-                             item.videoInfo.subTitle.includes('推荐'));
-                        
-                        // 放宽条件：只要不是推荐结果就加入
-                        if (!isRecommendation) {
-                            videos.push({
-                                vod_id: item.doc.id,
-                                vod_name: cleanTitle,
-                                vod_pic: item.videoInfo.imgUrl || '',
-                                vod_remarks: item.videoInfo.coverDoc?.chaseNum ? `追剧${item.videoInfo.coverDoc.chaseNum}` : '更新中'
-                            });
-                        }
-                    }
-                } catch (e) {
-                    console.log('放宽条件item处理失败:', e);
-                }
-            });
-        }
-        
-        console.log(`搜索"${wd}"找到${videos.length}个有效结果`);
-        
-        return {
-            page: parseInt(pg),
-            pagecount: 10,
-            limit: 20,
-            total: 100,
-            list: videos
-        };
-    } catch (error) {
-        console.error('搜索失败:', error);
-        return {
-            page: parseInt(pg),
-            pagecount: 1,
-            limit: 20,
-            total: 0,
-            list: []
-        };
-    }
-}
-
-// 保持vod1函数与原始规则完全一致
-async function vod1(ids) {
-    let response = await request('https://pbaccess.video.qq.com/trpc.videosearch.mobile_search.MultiTerminalSearch/MbSearch?vplatform=2', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.139 Safari/537.36',
-            'Origin': 'https://v.qq.com',
-            'Referer': 'https://v.qq.com/'
-        },
-        body: JSON.stringify({
+        // 构建请求参数
+        const params = {
             "version": "25042201",
             "clientType": 1,
             "filterValue": "",
             "uuid": "B1E50847-D25F-4C4B-BBA0-36F0093487F6",
             "retry": 0,
-            "query": ids,
-            "pagenum": 0,
+            "query": wd,
+            "pagenum": pg - 1, // API页码从0开始
             "isPrefetch": true,
-            "pagesize": 30,
+            "pagesize": PAGE_SIZE,
             "queryFrom": 0,
             "searchDatakey": "",
             "transInfo": "",
@@ -693,11 +588,73 @@ async function vod1(ids) {
                 "sugRelatedIds": "{}",
                 "appVersion": ""
             }
-        })
-    });
-    
-    // 直接返回 JSON 对象，不需要解析
-    return response;
+        };
+
+        // 发送请求
+        const response = await request(API_URL, {
+            method: "POST",
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.139 Safari/537.36',
+                'Content-Type': 'application/json',
+                'origin': 'https://v.qq.com',
+                'referer': 'https://v.qq.com/'
+            },
+            body: JSON.stringify(params)
+        });
+
+        const json = JSON.parse(response);
+        const videos = [];
+
+        // 处理普通搜索结果
+        if (json.data?.normalList?.itemList) {
+            json.data.normalList.itemList.forEach(item => {
+                if (item.doc?.id?.length > 11) {
+                    videos.push({
+                        vod_id: item.doc.id,
+                        vod_name: item.videoInfo?.title || "未知标题",
+                        vod_pic: item.videoInfo?.imgUrl || "",
+                        vod_remarks: item.videoInfo?.subTitle || ""
+                    });
+                }
+            });
+        }
+
+        // 处理区域搜索结果
+        if (json.data?.areaBoxList?.length > 0) {
+            json.data.areaBoxList.forEach(area => {
+                if (area.itemList) {
+                    area.itemList.forEach(item => {
+                        if (item.doc?.id?.length > 11 && item.videoInfo?.title?.includes(wd)) {
+                            videos.push({
+                                vod_id: item.doc.id,
+                                vod_name: item.videoInfo.title,
+                                vod_pic: item.videoInfo.imgUrl,
+                                vod_remarks: item.videoInfo.subTitle || ""
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        // 猫影视格式返回
+        return {
+            page: parseInt(pg),
+            pagecount: Math.ceil(videos.length / 20), // 猫影视每页20条
+            limit: 20,
+            total: videos.length,
+            list: videos
+        };
+    } catch (error) {
+        console.error('搜索失败:', error);
+        return {
+            page: parseInt(pg),
+            pagecount: 1,
+            limit: 20,
+            total: 0,
+            list: []
+        };
+    }
 }
 
 async function test(inReq, outResp) {
