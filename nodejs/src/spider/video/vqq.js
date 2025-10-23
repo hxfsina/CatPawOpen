@@ -645,7 +645,7 @@ async function search(inReq, _outResp) {
             page: parseInt(pg),
             pagecount: 10,
             limit: 20,
-            total: videos.length,
+            total: 100,
             list: videos
         };
     } catch (error) {
