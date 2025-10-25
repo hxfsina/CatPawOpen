@@ -299,7 +299,7 @@ async function test(inReq, outResp) {
 export default {
     meta: {
         key: 'jiaozi',
-        name: '📺『饺子影院』',
+        name: '💞『饺子影院』',
         type: 3,
     },
     api: async (fastify) => {
