@@ -148,6 +148,26 @@ async function play(inReq, _outResp) {
     try {
         console.log(`获取播放地址: flag=${flag}, id=${id}`);
         
+        // 将线路名称转换为数字标识
+        const lineNameToId = {
+            '线路1': '0',
+            '线路2': '1',
+            '线路3': '2',
+            '线路4': '3',
+            '线路5': '4',
+            '线路6': '5',
+            '线路7': '6',
+            '网盘': '7'
+        };
+        
+        let lineFlag = '0'; // 默认使用线路1
+        if (flag && lineNameToId[flag]) {
+            lineFlag = lineNameToId[flag];
+        } else if (flag && !isNaN(parseInt(flag))) {
+            // 如果已经是数字，直接使用
+            lineFlag = flag;
+        }
+        
         // 解析播放URL，提取pid参数
         let pid = id;
         if (id.includes('$')) {
@@ -155,7 +175,9 @@ async function play(inReq, _outResp) {
             pid = id.split('$')[1];
         }
         
-        const response = await req.get(`${API_BASE}/api/player?flag=${flag || '0'}&pid=${encodeURIComponent(pid)}`);
+        console.log(`转换后的参数: lineFlag=${lineFlag}, pid=${pid}`);
+        
+        const response = await req.get(`${API_BASE}/api/player?flag=${lineFlag}&pid=${encodeURIComponent(pid)}`);
         
         const data = response.data.data;
         
