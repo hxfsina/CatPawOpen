@@ -1,7 +1,7 @@
 import req from '../../util/req.js';
 
 // 饺子影院API基础域名 - 需要根据实际情况配置
-const API_BASE = 'http://localhost:3059';
+const API_BASE = 'http://nas.hxfkof.top:3059';
 
 let url = '';
 let categories = [];
@@ -125,8 +125,7 @@ async function detail(inReq, _outResp) {
             vod_director: data.vod_director,
             vod_content: data.vod_content,
             vod_play_from: data.vod_play_from,
-            vod_play_url: data.vod_play_url,
-            type_name: '视频'
+            vod_play_url: data.vod_play_url          
         };
         
         console.log(`成功获取视频详情: ${videoDetail.vod_name}`);
@@ -282,7 +281,7 @@ async function test(inReq, outResp) {
         }
         
         resp = await inReq.server.inject().post(`${prefix}/search`).payload({
-            wd: '入侵',
+            wd: '头号',
             page: 1,
         });
         dataResult.search = resp.json();
